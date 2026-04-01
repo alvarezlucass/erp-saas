@@ -1,0 +1,318 @@
+// Unifai - Schema de base de datos
+// PostgreSQL via Railway
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── USUARIOS ────────────────────────────────────────────────────────────────
+
+model Usuario {
+  id           String        @id @default(cuid())
+  nombre       String
+  email        String        @unique
+  passwordHash String
+  rol          RolUsuario    @default(OPERADOR)
+  activo       Boolean       @default(true)
+  creadoEn     DateTime      @default(now())
+
+  presupuestos Presupuesto[]
+  movimientos  Movimiento[]
+
+  @@map("usuarios")
+}
+
+enum RolUsuario {
+  ADMIN
+  OPERADOR
+  SOLO_LECTURA
+}
+
+// ─── INSUMOS Y COSTOS ────────────────────────────────────────────────────────
+
+model Insumo {
+  id          String          @id @default(cuid())
+  tipo        String          // TELA, COSTURA, BORDADO, ACCESORIO, CIERRE, REEB, CUELLO, ESTAMPADO, QUEPIS
+  categoria   String          // Piquet, Deportivo, CHOMBA, etc.
+  nombre      String
+  unidad      String?         // metro, unidad, etc.
+  activo      Boolean         @default(true)
+  creadoEn    DateTime        @default(now())
+  actualizadoEn DateTime      @updatedAt
+
+  precios     PrecioInsumo[]
+  usos        InsumoProducto[]
+
+  @@unique([tipo, nombre])
+  @@map("insumos")
+}
+
+model PrecioInsumo {
+  id          String    @id @default(cuid())
+  insumoId    String
+  costo       Decimal   @db.Decimal(12, 2)
+  fechaDesde  DateTime  @default(now())
+  motivo      String?   // "Aumento proveedor NORTEXTIL +5%", etc.
+  creadoEn    DateTime  @default(now())
+
+  insumo      Insumo    @relation(fields: [insumoId], references: [id])
+
+  @@map("precios_insumos")
+}
+
+// ─── PRODUCTOS ───────────────────────────────────────────────────────────────
+
+model Producto {
+  id           String           @id @default(cuid())
+  nombre       String           // "Chomba Manga Corta", "Campera Deportiva"
+  categoria    String           // Chomba, Campera, Remera, Pantalon, Buzo, etc.
+  activo       Boolean          @default(true)
+  creadoEn     DateTime         @default(now())
+
+  insumos      InsumoProducto[]
+  talles       ProductoTalle[]
+  lineasPres   LineaPresupuesto[]
+
+  @@map("productos")
+}
+
+// Qué insumos componen un producto y en qué cantidad
+model InsumoProducto {
+  id          String   @id @default(cuid())
+  productoId  String
+  insumoId    String
+  cantidad    Decimal  @db.Decimal(10, 4)  // metros de tela, unidades, etc.
+
+  producto    Producto @relation(fields: [productoId], references: [id])
+  insumo      Insumo   @relation(fields: [insumoId], references: [id])
+
+  @@unique([productoId, insumoId])
+  @@map("insumos_productos")
+}
+
+// Talles disponibles por producto con sus multiplicadores de costo
+model ProductoTalle {
+  id           String   @id @default(cuid())
+  productoId   String
+  talle        String   // "2-4", "6-8", "10-12", "14-16", "S", "M", "L", "XL"
+  pesoKg       Decimal? @db.Decimal(6, 3)
+  metrosTela   Decimal? @db.Decimal(6, 3)
+
+  producto     Producto @relation(fields: [productoId], references: [id])
+
+  @@unique([productoId, talle])
+  @@map("productos_talles")
+}
+
+// ─── INSTITUCIONES Y PRECIOS ─────────────────────────────────────────────────
+
+model Institucion {
+  id           String            @id @default(cuid())
+  nombre       String            @unique
+  tipo         TipoInstitucion   @default(COLEGIO)
+  contacto     String?
+  telefono     String?
+  activo       Boolean           @default(true)
+  creadoEn     DateTime          @default(now())
+
+  listas       ListaPrecio[]
+  presupuestos Presupuesto[]
+
+  @@map("instituciones")
+}
+
+enum TipoInstitucion {
+  COLEGIO
+  EMPRESA
+  PARTICULAR
+}
+
+model ListaPrecio {
+  id             String        @id @default(cuid())
+  institucionId  String
+  nombre         String        // "Lista Primaria 2025"
+  activa         Boolean       @default(true)
+  creadoEn       DateTime      @default(now())
+  actualizadaEn  DateTime      @updatedAt
+
+  institucion    Institucion   @relation(fields: [institucionId], references: [id])
+  items          ItemLista[]
+
+  @@map("listas_precios")
+}
+
+model ItemLista {
+  id            String      @id @default(cuid())
+  listaId       String
+  productoNombre String     // nombre visible en la lista
+  talle         String
+  precioPublico Decimal     @db.Decimal(12, 2)
+  costoBase     Decimal     @db.Decimal(12, 2)
+  margenBruto   Decimal     @db.Decimal(5, 4)   // 0.35 = 35%
+  margenNeto    Decimal     @db.Decimal(5, 4)
+  actualizadoEn DateTime    @updatedAt
+
+  lista         ListaPrecio @relation(fields: [listaId], references: [id])
+
+  @@map("items_lista")
+}
+
+// ─── PRESUPUESTOS Y PEDIDOS ───────────────────────────────────────────────────
+
+model Presupuesto {
+  id              String              @id @default(cuid())
+  numero          Int                 @unique @default(autoincrement())
+  institucionId   String?
+  clienteNombre   String?             // para clientes sin institucion
+  clienteContacto String?
+  clienteTelefono String?
+  modoPago        ModoPago            @default(TRANSFERENCIA)
+  descuento       Decimal             @default(0) @db.Decimal(5, 4)
+  recargo         Decimal             @default(0) @db.Decimal(5, 4)
+  senia           Decimal             @default(0) @db.Decimal(12, 2)
+  subtotal        Decimal             @db.Decimal(14, 2)
+  total           Decimal             @db.Decimal(14, 2)
+  estado          EstadoPresupuesto   @default(VIGENTE)
+  vigenciaHasta   DateTime?
+  notas           String?
+  creadoEn        DateTime            @default(now())
+  actualizadoEn   DateTime            @updatedAt
+  usuarioId       String?
+
+  institucion     Institucion?        @relation(fields: [institucionId], references: [id])
+  usuario         Usuario?            @relation(fields: [usuarioId], references: [id])
+  lineas          LineaPresupuesto[]
+  pedido          Pedido?
+
+  @@map("presupuestos")
+}
+
+enum ModoPago {
+  EFECTIVO
+  TRANSFERENCIA
+  TARJETA
+}
+
+enum EstadoPresupuesto {
+  VIGENTE
+  PEDIDO
+  CERRADO
+  CANCELADO
+}
+
+model LineaPresupuesto {
+  id              String      @id @default(cuid())
+  presupuestoId   String
+  productoId      String?
+  productoNombre  String      // snapshot del nombre al momento del presupuesto
+  talle           String
+  bordado         String?
+  estampado       String?
+  cantidad        Int
+  precioBordado   Decimal     @default(0) @db.Decimal(12, 2)
+  precioEstampado Decimal     @default(0) @db.Decimal(12, 2)
+  precioUnitario  Decimal     @db.Decimal(12, 2)
+  subtotal        Decimal     @db.Decimal(14, 2)
+
+  presupuesto     Presupuesto @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
+  producto        Producto?   @relation(fields: [productoId], references: [id])
+
+  @@map("lineas_presupuesto")
+}
+
+// ─── PEDIDOS Y ÓRDENES DE TRABAJO ─────────────────────────────────────────────
+
+model Pedido {
+  id              String         @id @default(cuid())
+  numero          Int            @unique @default(autoincrement())
+  presupuestoId   String         @unique
+  estado          EstadoPedido   @default(CORTE)
+  fechaEntrega    DateTime?
+  notas           String?
+  creadoEn        DateTime       @default(now())
+  actualizadoEn   DateTime       @updatedAt
+
+  presupuesto     Presupuesto    @relation(fields: [presupuestoId], references: [id])
+  ordenes         OrdenTrabajo[]
+
+  @@map("pedidos")
+}
+
+enum EstadoPedido {
+  CORTE
+  BORDADO
+  COSTURA
+  TERMINADO
+  ENTREGADO
+}
+
+model OrdenTrabajo {
+  id          String   @id @default(cuid())
+  pedidoId    String
+  tipo        String   // CORTE, BORDADO, COSTURA
+  descripcion String?
+  completada  Boolean  @default(false)
+  creadoEn    DateTime @default(now())
+
+  pedido      Pedido   @relation(fields: [pedidoId], references: [id])
+
+  @@map("ordenes_trabajo")
+}
+
+// ─── ADMINISTRACIÓN ────────────────────────────────────────────────────────────
+
+model Cuenta {
+  id          String       @id @default(cuid())
+  nombre      String       @unique // "Caja ahorro", "Cuenta corriente", "Efectivo"
+  tipo        TipoCuenta
+  activa      Boolean      @default(true)
+
+  movimientos Movimiento[]
+
+  @@map("cuentas")
+}
+
+enum TipoCuenta {
+  CAJA_AHORRO
+  CUENTA_CORRIENTE
+  EFECTIVO
+}
+
+model Movimiento {
+  id          String         @id @default(cuid())
+  cuentaId    String
+  tipo        TipoMovimiento
+  concepto    String
+  importe     Decimal        @db.Decimal(14, 2)  // positivo = ingreso, negativo = egreso
+  fecha       DateTime       @default(now())
+  usuarioId   String?
+  creadoEn    DateTime       @default(now())
+
+  cuenta      Cuenta         @relation(fields: [cuentaId], references: [id])
+  usuario     Usuario?       @relation(fields: [usuarioId], references: [id])
+
+  @@map("movimientos")
+}
+
+enum TipoMovimiento {
+  COBRO
+  PAGO_PROVEEDOR
+  GASTO
+  SENIA
+  TRANSFERENCIA
+}
+
+// ─── CONFIGURACIÓN ─────────────────────────────────────────────────────────────
+
+model Configuracion {
+  id     String @id @default(cuid())
+  clave  String @unique
+  valor  String
+
+  @@map("configuracion")
+}

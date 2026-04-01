@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+
+# Environment files — NUNCA subir al repo
+.env
+.env.local
+.env.production
+
+# Prisma engine binaries (se descargan en deploy)
+backend/node_modules/.prisma/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Vercel
+.vercel/
+
+# TypeScript
+*.tsbuildinfo
