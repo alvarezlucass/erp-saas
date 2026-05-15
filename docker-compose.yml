@@ -1,0 +1,44 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://unifai_user:unifai_pass@db:5432/unifai_db
+      - JWT_SECRET=industrial-secret-change-this
+      - PORT=3001
+      - FRONTEND_URL=http://localhost:3001
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=unifai_user
+      - POSTGRES_PASSWORD=unifai_pass
+      - POSTGRES_DB=unifai_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U unifai_user -d unifai_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  # Herramienta visual opcional para el tecnico / cliente
+  adminer:
+    image: adminer
+    ports:
+      - "8080:8080"
+    restart: always
+
+volumes:
+  postgres_data:

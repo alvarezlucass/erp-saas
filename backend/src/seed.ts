@@ -1,187 +1,215 @@
 /**
- * seed.ts — Carga inicial de datos reales desde los Excel de Amanecer
+ * seed.ts — Carga inicial de datos para Multi-tenant SaaS
  * Ejecutar: npm run db:seed
  */
 import { PrismaClient } from '@prisma/client'
+import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
 async function main() {
-  console.log('🌱 Iniciando seed de Unifai...\n')
+  console.log('🌱 Iniciando seed de Unifai (SaaS Mode)...\n')
 
-  // ─── CONFIGURACIÓN ────────────────────────────────────────────────────────
-  await prisma.configuracion.createMany({
-    skipDuplicates: true,
-    data: [
-      { clave: 'empresa_nombre',    valor: 'Amanecer Indumentaria' },
-      { clave: 'empresa_cuit',      valor: '20-23955065-8' },
-      { clave: 'empresa_direccion', valor: 'Chaco 216 - Ezeiza' },
-      { clave: 'iva',               valor: '0.21' },
-      { clave: 'iibb',              valor: '0.035' },
-      { clave: 'costo_tarjeta',     valor: '0.10' },
-      { clave: 'ley_25413',         valor: '0.006' },
-      { clave: 'mo_pct',            valor: '0.25' },
-      { clave: 'logistica_pct',     valor: '0.05' },
-      { clave: 'admin_pct',         valor: '0.03' },
-      { clave: 'ventas_pct',        valor: '0.03' },
-      { clave: 'fijos_pct',         valor: '0.03' },
-    ],
+  // 1. CREAR EMPRESA BASE
+  const empresa = await prisma.empresa.upsert({
+    where: { cuit: '20-23955065-8' },
+    update: {},
+    create: {
+      nombre: 'Amanecer Indumentaria',
+      cuit: '20-23955065-8',
+      plan: 'ENTERPRISE',
+      modulos: ['ADMIN', 'INVENTARIO', 'INDUSTRIAL', 'COMERCIAL', 'PRODUCCION', 'ADMINISTRACION']
+    }
   })
+  const empresaId = empresa.id
+  console.log(`✓ Empresa creada: ${empresa.nombre} (${empresaId})`)
+
+  // ─── CONFIGURACIÓN (MATRIZ DE COSTEO POR SEGMENTO) ────────────────────────
+  const SEGMENTOS = ['final', 'revendedor', 'empresa', 'revendido']
+  const configData: { clave: string; valor: string; empresaId: string }[] = [
+    { clave: 'empresa_nombre',    valor: 'Amanecer Indumentaria', empresaId },
+    { clave: 'empresa_cuit',      valor: '20-23955065-8', empresaId },
+    { clave: 'empresa_direccion', valor: 'Chaco 216 - Ezeiza', empresaId },
+  ]
+
+  // Definición de Claves de Costeo
+  const costKeys = [
+    { key: 'mo_pct',         label: 'Mano de Obra',     def: '0.25' },
+    { key: 'logistica_pct',  label: 'Logística',        def: '0.05' },
+    { key: 'admin_pct',      label: 'Administración',   def: '0.10' },
+    { key: 'ventas_pct',     label: 'Ventas',           def: '0.20' },
+    { key: 'ley_25413',      label: 'Ley 25413 Compra', def: '0.006' },
+    { key: 'fijos_pct',      label: 'Costos Fijos',     def: '0.07' },
+    { key: 'iva',            label: 'IVA Venta',        def: '0.21' },
+    { key: 'iibb',           label: 'IIBB Venta',       def: '0.04' },
+    { key: 'costo_tarjeta',  label: 'Tarjeta / Posnet', def: '0.10' },
+    { key: 'comision_pct',   label: 'Comisión',         def: '0.006' },
+    { key: 'ley_cheque_vta', label: 'Ley 25413 Venta',  def: '0.006' },
+    { key: 'target_margin_pct_final',      label: 'Margen Objetivo Final', def: '0.35' },
+    { key: 'target_margin_pct_revendedor', label: 'Margen Objetivo Revendedor', def: '0.15' },
+    { key: 'target_margin_pct_empresa',    label: 'Margen Objetivo Empresa', def: '0.25' },
+    { key: 'target_margin_pct_revendido',  label: 'Margen Objetivo Revendido', def: '0.10' },
+  ]
+
+  // Generar Matriz en Configuración
+  for (const item of costKeys) {
+    if (item.key.startsWith('target_margin')) {
+      configData.push({ clave: item.key, valor: item.def, empresaId })
+      continue
+    }
+    for (const seg of SEGMENTOS) {
+      let val = item.def
+      if (item.key === 'mo_pct' && seg === 'revendido') val = '0'
+      if (item.key === 'costo_tarjeta' && seg !== 'final') val = '0'
+      if (item.key === 'comision_pct' && seg !== 'revendedor') val = '0'
+      if (item.key === 'fijos_pct' && seg === 'empresa') val = '0.02' 
+      if (item.key === 'fijos_pct' && seg === 'revendido') val = '0'
+      configData.push({ clave: `${item.key}_${seg}`, valor: val, empresaId })
+    }
+  }
+
+  for (const c of configData) {
+    await prisma.configuracion.upsert({
+      where: { clave_empresaId: { clave: c.clave, empresaId: c.empresaId } },
+      update: { valor: c.valor },
+      create: c,
+    })
+  }
   console.log('✓ Configuración cargada')
 
   // ─── CUENTAS ──────────────────────────────────────────────────────────────
-  await prisma.cuenta.createMany({
-    skipDuplicates: true,
-    data: [
-      { nombre: 'Caja ahorro',      tipo: 'CAJA_AHORRO' as const },
-      { nombre: 'Cuenta corriente', tipo: 'CUENTA_CORRIENTE' as const },
-      { nombre: 'Efectivo',         tipo: 'EFECTIVO' as const },
-    ],
-  })
+  const cuentasData = [
+    { nombre: 'Caja ahorro',      tipo: 'CAJA_AHORRO' as any, empresaId },
+    { nombre: 'Cuenta corriente', tipo: 'CUENTA_CORRIENTE' as any, empresaId },
+    { nombre: 'Efectivo',         tipo: 'EFECTIVO' as any, empresaId },
+  ]
+  for (const c of cuentasData) {
+    await prisma.cuenta.upsert({
+      where: { nombre_empresaId: { nombre: c.nombre, empresaId } },
+      update: {},
+      create: c,
+    })
+  }
   console.log('✓ Cuentas cargadas')
 
   // ─── INSTITUCIONES ────────────────────────────────────────────────────────
   const instituciones = [
-    'San Ignacio', 'Eco Jardín y Primaria', 'Eco Secundaria',
-    'Amanecer', 'Palabras', 'Patito', 'Vicenta', 'Silos', 'Jacaranda', 'Carrusel', 'Peña',
+    { nombre: 'San Ignacio', logoUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=SI&backgroundColor=0038a8' },
+    { nombre: 'Eco Jardín y Primaria', logoUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=EJ&backgroundColor=2e7d32' },
+    { nombre: 'Eco Secundaria', logoUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=ES&backgroundColor=1b5e20' },
+    { nombre: 'Amanecer', logoUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=AM&backgroundColor=f57c00' },
+    { nombre: 'Palabras', logoUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=PA&backgroundColor=7b1fa2' },
+    'Patito', 'Vicenta', 'Silos', 'Jacaranda', 'Carrusel', 'Peña',
   ]
-  await prisma.institucion.createMany({
-    skipDuplicates: true,
-    data: instituciones.map(nombre => ({ nombre, tipo: 'COLEGIO' as const })),
-  })
-  console.log(`✓ ${instituciones.length} instituciones cargadas`)
+  for (const item of instituciones) {
+    const nombre = typeof item === 'string' ? item : item.nombre
+    const logoUrl = typeof item === 'string' ? null : item.logoUrl
+    await prisma.institucion.upsert({
+      where: { nombre_empresaId: { nombre, empresaId } },
+      update: { logoUrl },
+      create: { nombre, tipo: 'COLEGIO', empresaId, logoUrl },
+    })
+  }
+  console.log('✓ Instituciones cargadas')
 
-  // ─── INSUMOS (de Precios_Insumos.xlsx) ───────────────────────────────────
-  type InsumoSeed = { tipo: string; categoria: string; nombre: string; precio: number }
-
-  const insumosData: InsumoSeed[] = [
-    // COSTURAS
+  // ─── INSUMOS ─────────────────────────────────────────────────────────────
+  const insumosData = [
     { tipo: 'COSTURA', categoria: 'CHOMBA',   nombre: 'Chomba Manga Corta',             precio: 1643.35 },
     { tipo: 'COSTURA', categoria: 'CHOMBA',   nombre: 'Chomba Manga Larga',             precio: 1906.64 },
-    { tipo: 'COSTURA', categoria: 'CHOMBA',   nombre: 'Chomba AGS',                     precio: 1643.35 },
     { tipo: 'COSTURA', categoria: 'REMERA',   nombre: 'Remera Manga Corta',             precio: 1271.50 },
-    { tipo: 'COSTURA', categoria: 'REMERA',   nombre: 'Remera Manga Larga',             precio: 1106.00 },
-    { tipo: 'COSTURA', categoria: 'CAMPERA',  nombre: 'Campera Deportiva',              precio: 4124.40 },
-    { tipo: 'COSTURA', categoria: 'CAMPERA',  nombre: 'Campera Algodón',               precio: 4124.40 },
-    { tipo: 'COSTURA', categoria: 'CAMPERA',  nombre: 'Tracker Invierno',              precio: 7634.55 },
-    { tipo: 'COSTURA', categoria: 'CAMPERA',  nombre: 'Campera Polar',                 precio: 4124.40 },
-    { tipo: 'COSTURA', categoria: 'CHALECO',  nombre: 'Chaleco',                       precio: 4124.00 },
-    { tipo: 'COSTURA', categoria: 'BUZO',     nombre: 'Buzo Deportivo',                precio: 4124.40 },
-    { tipo: 'COSTURA', categoria: 'BUZO',     nombre: 'Buzo Polar',                    precio: 4124.40 },
-    { tipo: 'COSTURA', categoria: 'BUZO',     nombre: 'Buzo Algodón',                 precio: 4124.00 },
-    { tipo: 'COSTURA', categoria: 'BUZO',     nombre: 'Buzo con Parches',             precio: 4089.75 },
-    { tipo: 'COSTURA', categoria: 'BUZO',     nombre: 'Buzo Recto',                   precio: 4124.40 },
-    { tipo: 'COSTURA', categoria: 'PANTALON', nombre: 'Pantalón Deportivo',           precio: 1874.25 },
-    { tipo: 'COSTURA', categoria: 'PANTALON', nombre: 'Pantalón con Recorte',         precio: 2175.60 },
-    { tipo: 'COSTURA', categoria: 'PANTALON', nombre: 'Pantalón Cargo',               precio: 4259.85 },
-    { tipo: 'COSTURA', categoria: 'SHORT',    nombre: 'Short',                        precio: 1306.20 },
-    { tipo: 'COSTURA', categoria: 'POLLERA',  nombre: 'Pollera Pantalón',             precio: 1714.65 },
-    { tipo: 'COSTURA', categoria: 'DELANTAL', nombre: 'Delantal Técnico',            precio: 5112.45 },
-    { tipo: 'COSTURA', categoria: 'PINTOR',   nombre: 'Conjunto Pintor',              precio: 2726.85 },
-    // TELAS
     { tipo: 'TELA', categoria: 'Piquet',     nombre: 'Piquet Premium',               precio: 14201.10 },
-    { tipo: 'TELA', categoria: 'Piquet',     nombre: 'Piquet Básico',               precio: 14201.10 },
-    { tipo: 'TELA', categoria: 'Piquet',     nombre: 'Piquet Francia NORTEXTIL',    precio: 14201.10 },
-    { tipo: 'TELA', categoria: 'Deportivo',  nombre: 'Deportivo Invierno Básico',  precio: 14700.00 },
-    { tipo: 'TELA', categoria: 'Deportivo',  nombre: 'Deportivo Verano Básico',    precio: 14700.00 },
     { tipo: 'TELA', categoria: 'Deportivo',  nombre: 'Deportivo Invierno Premium', precio: 22887.21 },
-    { tipo: 'TELA', categoria: 'Deportivo',  nombre: 'Deportivo Verano Premium',   precio: 22887.21 },
-    { tipo: 'TELA', categoria: 'Deportivo',  nombre: 'Deportivo NORTEXTIL',        precio: 12600.00 },
-    { tipo: 'TELA', categoria: 'Polar',      nombre: 'Polar Estándar',             precio: 16269.22 },
-    { tipo: 'TELA', categoria: 'Polar',      nombre: 'Polar Premium',              precio: 17096.47 },
-    { tipo: 'TELA', categoria: 'Polar',      nombre: 'Polar Básico',               precio: 14802.23 },
-    { tipo: 'TELA', categoria: 'Arciel',     nombre: 'Arciel Blanco',               precio:  7169.49 },
-    { tipo: 'TELA', categoria: 'Arciel',     nombre: 'Arciel Color',                precio:  7192.50 },
-    { tipo: 'TELA', categoria: 'Jersey',     nombre: 'Jersey Básico',              precio: 12744.90 },
-    { tipo: 'TELA', categoria: 'Jersey',     nombre: 'Jersey Premium',             precio: 12744.90 },
-    { tipo: 'TELA', categoria: 'Algodón',   nombre: 'Algodón Gris Melange',       precio: 13511.73 },
-    { tipo: 'TELA', categoria: 'Tracker',    nombre: 'Tracker',                     precio:  7560.00 },
-    { tipo: 'TELA', categoria: 'Microfibra', nombre: 'Microfibra',                  precio:  3237.79 },
-    // BORDADOS
     { tipo: 'BORDADO', categoria: 'FRENTE',   nombre: 'Solo frente',                precio:  1386.03 },
-    { tipo: 'BORDADO', categoria: 'FRENTE',   nombre: 'Frente y manga',             precio:  2101.76 },
-    { tipo: 'BORDADO', categoria: 'ESPECIAL', nombre: 'Bordado Barquito',           precio:  1568.88 },
-    { tipo: 'BORDADO', categoria: 'VICENTA',  nombre: 'Bordado simple Vicenta',     precio:  1081.99 },
-    { tipo: 'BORDADO', categoria: 'NOMBRE',   nombre: 'Nombre',                     precio:  1255.11 },
-    { tipo: 'BORDADO', categoria: 'NOMBRE',   nombre: 'Nombre con aplique',         precio:  2326.28 },
-    { tipo: 'BORDADO', categoria: 'INSIGNIA', nombre: 'Insignias de grado',         precio:  2400.00 },
-    { tipo: 'BORDADO', categoria: 'INSIGNIA', nombre: 'Insignias de nombres',       precio:  2400.00 },
-    { tipo: 'BORDADO', categoria: 'INSIGNIA', nombre: 'Insignias logo PSA',         precio:  4100.00 },
-    { tipo: 'BORDADO', categoria: 'INSIGNIA', nombre: 'Insignias banderas',         precio:  2520.00 },
-    { tipo: 'BORDADO', categoria: 'GRUPO',    nombre: 'Grupo sanguíneo',           precio:  1680.00 },
-    { tipo: 'BORDADO', categoria: 'EMPRESA',  nombre: 'Aerolíneas',               precio:  3110.72 },
     { tipo: 'BORDADO', categoria: 'EMPRESA',  nombre: 'AGS',                       precio: 10000.00 },
-    // ESTAMPADOS
-    { tipo: 'ESTAMPADO', categoria: 'FRENTE', nombre: 'Estampado frente',          precio:  8753.56 },
-    // CUELLOS
-    { tipo: 'CUELLO', categoria: 'PARALELO',  nombre: 'Cuello solo paralelo',      precio:   871.50 },
-    { tipo: 'CUELLO', categoria: 'NORTEXTIL', nombre: 'Cuello y puño NORTEXTIL',   precio:  1312.50 },
-    { tipo: 'CUELLO', categoria: 'ESPECIAL',  nombre: 'Cuello y puño esp. paralelo', precio: 2073.75 },
-    // ACCESORIOS
-    { tipo: 'ACCESORIO', categoria: 'ELASTICO', nombre: 'Elástico con cordón',    precio:   367.50 },
-    { tipo: 'ACCESORIO', categoria: 'BOTON',    nombre: 'Botón',                  precio:   315.00 },
-    { tipo: 'ACCESORIO', categoria: 'REEB',     nombre: 'Reeb campera',            precio:  3885.00 },
-    { tipo: 'ACCESORIO', categoria: 'REEB',     nombre: 'Reeb con cuello',         precio:   577.99 },
-    // CIERRES
-    { tipo: 'CIERRE', categoria: 'CIERRE', nombre: 'Cierre largo',                precio:   787.50 },
-    { tipo: 'CIERRE', categoria: 'CIERRE', nombre: 'Cierre corto',                precio:   766.50 },
-    // QUEPIS
-    { tipo: 'QUEPIS', categoria: 'QUEPIS', nombre: 'Quepis',                      precio: 18688.65 },
   ]
 
-  let cargados = 0
   for (const d of insumosData) {
-    const insumo = await prisma.insumo.upsert({
-      where: { tipo_nombre: { tipo: d.tipo, nombre: d.nombre } },
-      update: {},
-      create: { tipo: d.tipo, categoria: d.categoria, nombre: d.nombre },
+    let insumo = await prisma.insumo.findFirst({
+      where: { tipo: d.tipo, nombre: d.nombre, empresaId }
     })
-    const existe = await prisma.precioInsumo.findFirst({ where: { insumoId: insumo.id } })
-    if (!existe) {
-      await prisma.precioInsumo.create({
-        data: {
-          insumoId: insumo.id,
-          costo:    d.precio,
-          motivo:   'Precio inicial — importado de Excel',
-          fechaDesde: new Date('2025-04-23'),
-        },
+    if (!insumo) {
+      insumo = await prisma.insumo.create({
+        data: { tipo: d.tipo, categoria: d.categoria, nombre: d.nombre, empresaId }
       })
-      cargados++
     }
+    await prisma.precioInsumo.create({
+      data: { insumoId: insumo.id, costo: d.precio, motivo: 'Seed Inicial' }
+    })
   }
-  console.log(`✓ ${cargados} insumos con precios cargados`)
+  console.log('✓ Insumos cargados')
 
-  // ─── PRODUCTOS ────────────────────────────────────────────────────────────
-  const productos = [
-    { nombre: 'Chomba Manga Corta',  categoria: 'Chomba'   },
-    { nombre: 'Chomba Manga Larga',  categoria: 'Chomba'   },
-    { nombre: 'Remera Manga Corta',  categoria: 'Remera'   },
-    { nombre: 'Remera Manga Larga',  categoria: 'Remera'   },
-    { nombre: 'Campera Deportiva',   categoria: 'Campera'  },
-    { nombre: 'Campera Algodón',    categoria: 'Campera'  },
-    { nombre: 'Campera Invierno',    categoria: 'Campera'  },
-    { nombre: 'Chaleco',             categoria: 'Chaleco'  },
-    { nombre: 'Buzo Deportivo',      categoria: 'Buzo'     },
-    { nombre: 'Buzo Polar',          categoria: 'Buzo'     },
-    { nombre: 'Buzo Recto',          categoria: 'Buzo'     },
-    { nombre: 'Pantalón Deportivo', categoria: 'Pantalón'},
-    { nombre: 'Short',               categoria: 'Short'    },
-    { nombre: 'Pollera Secundario',  categoria: 'Pollera'  },
-    { nombre: 'Quepis',              categoria: 'Accesorio'},
+  // ─── CATEGORÍAS ──────────────────────────────────────────────────────────
+  const categorias = ['Chomba', 'Remera', 'Campera', 'Buzo', 'Pantalón']
+  const catMap: Record<string, string> = {}
+  for (const nombre of categorias) {
+    const c = await prisma.categoriaProducto.upsert({
+      where: { nombre_empresaId: { nombre, empresaId } },
+      update: {},
+      create: { nombre, empresaId },
+    })
+    catMap[nombre] = c.id
+  }
+  console.log('✓ Categorías cargadas')
+
+  // ─── CURVAS ──────────────────────────────────────────────────────────────
+  await prisma.curvaTalle.upsert({
+    where: { nombre_empresaId: { nombre: 'Adultos S-XL', empresaId } },
+    update: {},
+    create: {
+      nombre: 'Adultos S-XL',
+      empresaId,
+      items: {
+        create: [
+          { nombre: 'S',  orden: 1 },
+          { nombre: 'M',  orden: 2 },
+          { nombre: 'L',  orden: 3 },
+          { nombre: 'XL', orden: 4 },
+        ]
+      }
+    }
+  })
+  console.log('✓ Curvas de talles cargadas')
+
+  // ─── PRODUCTOS ───────────────────────────────────────────────────────────
+  const prodData = [
+    { nombre: 'Chomba Amanecer AGS', cat: 'Chomba' },
+    { nombre: 'Remera Manga Corta', cat: 'Remera' },
   ]
-  await prisma.producto.createMany({ skipDuplicates: true, data: productos })
-  console.log(`✓ ${productos.length} productos cargados`)
+  for (const p of prodData) {
+    await prisma.producto.upsert({
+      where: { nombre_empresaId: { nombre: p.nombre, empresaId } },
+      update: {},
+      create: { nombre: p.nombre, categoriaId: catMap[p.cat], empresaId }
+    })
+  }
+  console.log('✓ Productos cargados')
 
-  // ─── USUARIO ADMIN ────────────────────────────────────────────────────────
-  const bcrypt = await import('bcryptjs')
-  const hash = await bcrypt.hash('unifai2025', 10)
+  // ─── USUARIOS ─────────────────────────────────────────────────────────────
+  const hashAdmin = await bcrypt.hash('unifai2025', 10)
+  const hashSuper = await bcrypt.hash('@Marte2026', 10)
+  
+  // Cliente Admin (Amanecer Indumentaria)
   await prisma.usuario.upsert({
     where:  { email: 'admin@amanecer.com' },
-    update: {},
-    create: { nombre: 'Administrador', email: 'admin@amanecer.com', passwordHash: hash, rol: 'ADMIN' },
+    update: { empresaId, rol: 'CLIENT_ADMIN', passwordHash: hashAdmin },
+    create: { nombre: 'Admin Amanecer', email: 'admin@amanecer.com', passwordHash: hashAdmin, rol: 'CLIENT_ADMIN', empresaId },
   })
-  console.log('✓ Usuario admin creado')
-  console.log('\n✅ Seed completado. Credenciales: admin@amanecer.com / unifai2025')
+  
+  // Super Admin (Productor / Proveedor del Sistema)
+  // Nota: En un entorno real, el Super Admin podría estar en una empresa "Sistema"
+  await prisma.usuario.upsert({
+    where: { email: 'admin@t4-e.com' },
+    update: { passwordHash: hashSuper },
+    create: { 
+      nombre: 'Super Admin Unifai', 
+      email: 'admin@t4-e.com', 
+      passwordHash: hashSuper, 
+      rol: 'SUPER_ADMIN',
+      empresaId
+    }
+  })
+
+  console.log('\n✅ Seed completado.')
 }
 
 main()

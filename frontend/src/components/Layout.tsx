@@ -1,90 +1,255 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import { useAuthStore } from '../store/authStore'
+import { motion, AnimatePresence } from 'framer-motion'
+import { 
+  Menu, X, LogOut, LayoutGrid, Building2, 
+  ShoppingCart, Factory, Star, Wallet, Users, BarChart3, Settings
+} from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { empresaApi } from '../lib/api'
 
-const nav = [
-  { to: '/',             label: 'Inicio',            color: 'bg-blue-500' },
-  { to: '/insumos',      label: 'Insumos y costos',  color: 'bg-teal-500' },
-  { to: '/precios',      label: 'Listas de precios', color: 'bg-amber-500' },
-  { to: '/presupuestos', label: 'Presupuestos',       color: 'bg-orange-500' },
-  { to: '/pedidos',      label: 'Pedidos y órdenes', color: 'bg-purple-500' },
-  { to: '/admin',        label: 'Administración',     color: 'bg-gray-400' },
+interface MenuItem {
+  to: string
+  label: string
+  color: string
+}
+
+const MENU_GROUPS: { title: string; icon: any; items: MenuItem[] }[] = [
+  {
+    title: 'Principal',
+    icon: LayoutGrid,
+    items: [
+      { to: '/',             label: 'Inicio / Dashboard', color: 'bg-emerald-500' },
+      { to: '/productos',    label: 'Catálogo de productos', color: 'bg-blue-500' },
+      { to: '/precios',      label: 'Listas de precios', color: 'bg-amber-500' },
+      { to: '/presupuestos', label: 'Presupuestos',       color: 'bg-orange-500' },
+      { to: '/punto-venta/vendedor', label: 'Ventas (mostrador)', color: 'bg-pink-500' },
+      { to: '/punto-venta/caja',     label: 'Caja y cobros',      color: 'bg-cyan-600' },
+      { to: '/pedidos',      label: 'Pedidos y órdenes', color: 'bg-purple-500' },
+    ]
+  },
+  {
+    title: 'Compras y Abastecimiento',
+    icon: ShoppingCart,
+    items: [
+      { to: '/proveedores',          label: 'Gestión de Proveedores', color: 'bg-indigo-500' },
+      { to: '/compras/oc',           label: 'Órdenes de Compra',     color: 'bg-indigo-400' },
+      { to: '/compras/recepcion',    label: 'Recepción de Mercadería', color: 'bg-indigo-300' },
+      { to: '/compras/devoluciones', label: 'Diferencias y Devoluciones', color: 'bg-rose-400' },
+    ]
+  },
+  {
+    title: 'Producción y Taller',
+    icon: Factory,
+    items: [
+      { to: '/admin/templates',      label: 'Templates de Moldería', color: 'bg-rose-500' },
+      { to: '/insumos',              label: 'Insumos y Costos',      color: 'bg-teal-500' },
+      { to: '/inventario',           label: 'Control de Stock',      color: 'bg-cyan-500' },
+      { to: '/admin/costeos',        label: 'Ajustes de Costeo',      color: 'bg-indigo-600' },
+      { to: '/produccion/ordenes',   label: 'Órdenes de Producción',  color: 'bg-orange-600' },
+      { to: '/produccion/etapas',    label: 'Control de Etapas / Taller', color: 'bg-amber-600' },
+      { to: '/produccion/entrega',   label: 'Entrega Producto Terminado', color: 'bg-emerald-600' },
+    ]
+  },
+  {
+    title: 'Especial',
+    icon: Star,
+    items: [
+      { to: '/bordados',             label: 'Alta de Bordados',     color: 'bg-violet-500' },
+      { to: '/terceros/ordenes',     label: 'Órdenes a Terceros',   color: 'bg-fuchsia-500' },
+    ]
+  },
+  {
+    title: 'Finanzas y Tesorería',
+    icon: Wallet,
+    items: [
+      { to: '/finanzas/cc',          label: 'Cuentas Corrientes',     color: 'bg-emerald-500' },
+      { to: '/finanzas/bancos',      label: 'Bancos y Movimientos',   color: 'bg-blue-600' },
+      { to: '/finanzas/pagos',       label: 'Pago a Proveedores',     color: 'bg-rose-600' },
+      { to: '/finanzas/cashflow',    label: 'Flujo de Caja (Cashflow)', color: 'bg-cyan-600' },
+      { to: '/finanzas/proyecciones', label: 'Proyecciones Financieras', color: 'bg-teal-600' },
+      { to: '/finanzas/sueldos',     label: 'Sueldos y Liquidación',  color: 'bg-orange-400' },
+      { to: '/finanzas/contabilidad', label: 'Contabilidad General',  color: 'bg-gray-500' },
+    ]
+  },
+  {
+    title: 'Gestión Comercial',
+    icon: Users,
+    items: [
+      { to: '/comercial/clientes',   label: 'Gestión de Clientes',    color: 'bg-blue-500' },
+      { to: '/comercial/historial',  label: 'Historial por Cliente',  color: 'bg-indigo-400' },
+      { to: '/comercial/revendedores', label: 'Revendedores (Pasamanos)', color: 'bg-pink-500' },
+    ]
+  },
+  {
+    title: 'Reportes e Inteligencia',
+    icon: BarChart3,
+    items: [
+      { to: '/reportes/ventas',      label: 'Reportes de Ventas',      color: 'bg-emerald-500' },
+      { to: '/reportes/rentabilidad', label: 'Rentabilidad por Producto', color: 'bg-amber-500' },
+      { to: '/reportes/ejecutivo',   label: 'Dashboard Ejecutivo',     color: 'bg-indigo-500' },
+    ]
+  },
+  {
+    title: 'Sistema y Administración',
+    icon: Settings,
+    items: [
+      { to: '/admin/usuarios',       label: 'Gestión de Equipo',      color: 'bg-indigo-600' },
+      { to: '/admin',                label: 'Administración Global',  color: 'bg-gray-400' },
+      { to: '/admin/importaciones',  label: 'Carga Masiva de Datos',  color: 'bg-teal-500' },
+      { to: '/admin/roles',          label: 'Roles y Permisos Avanzados', color: 'bg-rose-500' },
+    ]
+  }
 ]
 
 export function Layout() {
   const { usuario, logout } = useAuthStore()
   const navigate = useNavigate()
 
+  const { data: empresa } = useQuery({
+    queryKey: ['mi-empresa'],
+    queryFn: () => empresaApi.getMe(),
+    enabled: !!usuario
+  })
+
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024)
+  const [isOpen, setIsOpen] = useState(window.innerWidth >= 1024)
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 1024
+      setIsMobile(mobile)
+      if (!mobile) setIsOpen(true)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   function handleLogout() {
     logout()
     navigate('/login')
   }
 
+  const filteredGroups = MENU_GROUPS.map(group => ({
+    ...group,
+    items: group.items.filter(item => {
+      if (usuario?.rol === 'SUPER_ADMIN' || usuario?.rol === 'CLIENT_ADMIN') return true
+      if (item.rol && usuario?.rol !== item.rol) return false
+      if (item.modulo && !usuario?.modulos?.includes(item.modulo)) return false
+      if (item.permiso && !usuario?.permisos?.includes(item.permiso)) return false
+      return true
+    })
+  })).filter(group => group.items.length > 0)
+
   return (
-    <div className="flex h-screen bg-gray-50 font-sans">
-      {/* Sidebar */}
-      <aside className="w-52 bg-white border-r border-gray-100 flex flex-col shrink-0">
-        <div className="px-4 py-4 border-b border-gray-100">
-          <div className="text-sm font-medium text-gray-900 tracking-tight">Unifai</div>
-          <div className="text-xs text-gray-400 mt-0.5">Sistema de gestión</div>
+    <div className="flex h-screen bg-[#0a0a0b] font-sans overflow-hidden dark">
+      <AnimatePresence>
+        {isMobile && isOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsOpen(false)}
+            className="fixed inset-0 bg-black/60 backdrop-blur-md z-40 lg:hidden"
+          />
+        )}
+      </AnimatePresence>
+
+      <motion.aside 
+        initial={false}
+        animate={{ 
+          width: isOpen ? 380 : 0,
+          x: isMobile && !isOpen ? -380 : 0
+        }}
+        className={`bg-[#0f0f12] border-r border-gray-800/50 flex flex-col shrink-0 z-50 fixed lg:relative h-full overflow-hidden shadow-[20px_0_40px_rgba(0,0,0,0.6)]`}
+      >
+        <div className="px-8 py-8 border-b border-gray-800/50 flex items-center justify-between bg-[#131317]">
+          <div className="flex items-center gap-4">
+            {empresa?.logoUrl ? (
+              <img src={empresa.logoUrl} className="w-12 h-12 rounded-2xl object-contain shadow-xl border border-gray-700 bg-gray-900" />
+            ) : (
+              <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-[0_0_20px_rgba(79,70,229,0.4)]">
+                <Building2 size={28} />
+              </div>
+            )}
+            <div className="overflow-hidden">
+              <div className="text-base font-black text-white tracking-tight leading-tight uppercase italic">
+                {empresa?.nombre || 'Unifai SaaS'}
+              </div>
+              <div className="text-[10px] text-emerald-400 font-extrabold mt-1 uppercase tracking-[0.2em] truncate opacity-80">
+                {usuario?.rol === 'SUPER_ADMIN' ? 'Control Master' : 'Industrial ERP'}
+              </div>
+            </div>
+          </div>
         </div>
 
-        <nav className="flex-1 p-2 space-y-0.5">
-          <div className="text-[10px] font-medium text-gray-400 uppercase tracking-widest px-2 pt-3 pb-1">
-            Principal
-          </div>
-          {nav.slice(0, 4).map(item => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/'}
-              className={({ isActive }) =>
-                `flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors ${
-                  isActive
-                    ? 'bg-gray-100 text-gray-900 font-medium'
-                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
-                }`
-              }
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${item.color}`} />
-              {item.label}
-            </NavLink>
-          ))}
-
-          <div className="text-[10px] font-medium text-gray-400 uppercase tracking-widest px-2 pt-4 pb-1">
-            Producción
-          </div>
-          {nav.slice(4).map(item => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors ${
-                  isActive
-                    ? 'bg-gray-100 text-gray-900 font-medium'
-                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
-                }`
-              }
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${item.color}`} />
-              {item.label}
-            </NavLink>
+        <nav className="flex-1 p-6 space-y-12 overflow-y-auto scrollbar-hide bg-[#0f0f12]">
+          {MENU_GROUPS.map((group) => (
+            <div key={group.title} className="space-y-4">
+              <div className="flex items-center gap-3 px-4">
+                 <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.6)]" />
+                 <div className="text-[11px] font-black text-gray-500 uppercase tracking-[0.3em] opacity-70">
+                    {group.title}
+                 </div>
+              </div>
+              <div className="space-y-1.5">
+                {group.items.map(item => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.to === '/'}
+                    onClick={() => isMobile && setIsOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-4 px-5 py-4 rounded-[1.4rem] text-[14px] font-black transition-all border group ${
+                        isActive
+                          ? 'bg-indigo-600 text-white shadow-[0_10px_25px_rgba(79,70,229,0.3)] border-indigo-400 scale-[1.03]'
+                          : 'text-gray-400 hover:bg-white/5 hover:text-white border-transparent hover:border-white/10'
+                      }`
+                    }
+                  >
+                    <div className={`w-3 h-3 rounded-full ${item.color} shadow-lg group-hover:scale-125 transition-transform`} />
+                    <span className="tracking-tight italic uppercase whitespace-pre-wrap">{item.label}</span>
+                  </NavLink>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
 
-        <div className="p-3 border-t border-gray-100">
-          <div className="text-xs text-gray-500 truncate">{usuario?.nombre}</div>
+        <div className="p-8 border-t border-gray-800/50 bg-[#131317]">
+          <div className="flex items-center gap-4 mb-6">
+             <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-black text-sm uppercase shadow-inner">
+                {usuario?.nombre?.substring(0,2)}
+             </div>
+             <div className="flex-1 overflow-hidden">
+                <div className="text-sm font-black text-white truncate uppercase italic tracking-tight">{usuario?.nombre}</div>
+                <div className="text-[10px] font-bold text-gray-500 truncate uppercase tracking-widest opacity-80">{usuario?.rol}</div>
+             </div>
+          </div>
           <button
             onClick={handleLogout}
-            className="text-xs text-gray-400 hover:text-gray-600 mt-1 transition-colors"
+            className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl text-[11px] font-black text-rose-400 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 transition-all uppercase tracking-[0.2em]"
           >
-            Cerrar sesión
+            <LogOut size={14} />
+            Cerrar Sesión
           </button>
         </div>
-      </aside>
+      </motion.aside>
 
-      {/* Main */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <main className="flex-1 overflow-auto p-6">
+      <div className="flex-1 flex flex-col overflow-hidden relative bg-[#0a0a0b]">
+        {!isOpen && (
+          <motion.button 
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            onClick={() => setIsOpen(true)}
+            className="fixed top-8 left-8 z-30 w-14 h-14 bg-[#131317] rounded-2xl shadow-2xl border border-gray-700 flex items-center justify-center text-indigo-400 lg:hidden"
+          >
+            <Menu size={28} />
+          </motion.button>
+        )}
+
+        <main className="flex-1 overflow-auto bg-[#0a0a0b]">
           <Outlet />
         </main>
       </div>

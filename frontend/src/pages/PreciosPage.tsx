@@ -1,213 +1,274 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { formatCurrency } from '../lib/utils'
-
-// Datos de lista de precios reales extraídos de los Excel
-const LISTAS_DEMO: Record<string, { producto: string; talles: { talle: string; precio: number; margen: number }[] }[]> = {
-  'San Ignacio': [
-    { producto: 'Chomba M/C', talles: [
-      { talle: '2-4', precio: 23600, margen: 0.509 }, { talle: '6-8',   precio: 24100, margen: 0.511 },
-      { talle: '10-12', precio: 26500, margen: 0.498 }, { talle: '14-16', precio: 28100, margen: 0.492 },
-      { talle: 'S', precio: 32300, margen: 0.471 }, { talle: 'M-L', precio: 32300, margen: 0.471 },
-    ]},
-    { producto: 'Chomba M/L', talles: [
-      { talle: '2-4', precio: 24700, margen: 0.48 }, { talle: '6-8', precio: 26200, margen: 0.47 },
-      { talle: '10-12', precio: 27600, margen: 0.46 }, { talle: '14-16', precio: 29100, margen: 0.45 },
-    ]},
-    { producto: 'Remera M/C', talles: [
-      { talle: '2-4', precio: 23200, margen: 0.50 }, { talle: '6-8', precio: 23800, margen: 0.50 },
-      { talle: '10-12', precio: 24200, margen: 0.49 }, { talle: '14-16', precio: 24900, margen: 0.49 },
-    ]},
-  ],
-  'Eco Jardín y Primaria': [
-    { producto: 'Chomba M/C', talles: [
-      { talle: '2-4', precio: 24900, margen: 0.41 }, { talle: '6-8', precio: 25300, margen: 0.41 },
-      { talle: '10-12', precio: 27400, margen: 0.40 }, { talle: '14-16', precio: 29100, margen: 0.39 },
-    ]},
-    { producto: 'Chomba M/L', talles: [
-      { talle: '2-4', precio: 26400, margen: 0.39 }, { talle: '6-8', precio: 27400, margen: 0.39 },
-    ]},
-    { producto: 'Remera M/C', talles: [
-      { talle: '10-12', precio: 25300, margen: 0.48 }, { talle: '14-16', precio: 25900, margen: 0.47 },
-    ]},
-  ],
-  'Amanecer': [
-    { producto: 'Chomba M/C', talles: [
-      { talle: '6-8', precio: 24400, margen: 0.50 }, { talle: '10-12', precio: 26900, margen: 0.49 },
-      { talle: '14-16', precio: 28200, margen: 0.48 },
-    ]},
-    { producto: 'Remera M/C', talles: [
-      { talle: '6-8', precio: 24100, margen: 0.50 }, { talle: '10-12', precio: 24300, margen: 0.49 },
-    ]},
-  ],
-  'Palabras': [
-    { producto: 'Chomba M/C', talles: [
-      { talle: '6-8', precio: 24400, margen: 0.50 }, { talle: '10-12', precio: 26700, margen: 0.48 },
-      { talle: '14-16', precio: 28200, margen: 0.47 },
-    ]},
-    { producto: 'Chomba M/L', talles: [
-      { talle: '6-8', precio: 25900, margen: 0.43 }, { talle: '10-12', precio: 28400, margen: 0.42 },
-    ]},
-  ],
-}
-
-const INSTITUCIONES = Object.keys(LISTAS_DEMO)
-
-const COMPARATIVO = [
-  { talle: '2-4',   si: 23600, eco: 24900, amanecer: null,  palabras: null  },
-  { talle: '6-8',   si: 24100, eco: 25300, amanecer: 24400, palabras: 24400 },
-  { talle: '10-12', si: 26500, eco: 27400, amanecer: 26900, palabras: 26700 },
-  { talle: '14-16', si: 28100, eco: 29100, amanecer: 28200, palabras: 28200 },
-]
+import { useQuery } from '@tanstack/react-query'
+import { productosApi, institucionesApi, categoriasApi, configuracionApi } from '../lib/api'
+import { Building2, Plus, Download, LayoutTemplate, Info, TrendingUp, Search, Filter, Tags, ChevronRight } from 'lucide-react'
+import { useAuthStore } from '../store/authStore'
 
 function margenColor(m: number) {
-  if (m >= 0.50) return 'bg-teal-50 text-teal-800'
-  if (m >= 0.40) return 'bg-blue-50 text-blue-700'
-  return 'bg-amber-50 text-amber-700'
+  if (m >= 0.50) return 'bg-teal-50 text-teal-800 border-teal-100'
+  if (m >= 0.40) return 'bg-blue-50 text-blue-700 border-blue-100'
+  if (m >= 0.20) return 'bg-indigo-50 text-indigo-700 border-indigo-100'
+  return 'bg-amber-50 text-amber-700 border-amber-100'
 }
 
+type GroupBy = 'CATEGORIA' | 'INSTITUCION' | 'NINGUNO'
+type TarifaType = 'precioFinal' | 'precioRevendedor' | 'precioEmpresa' | 'precioRevendido'
+
 export function PreciosPage() {
-  const [inst, setInst] = useState('San Ignacio')
+  const { usuario } = useAuthStore()
+  const isAdmin = usuario?.rol === 'CLIENT_ADMIN' || usuario?.rol === 'SUPER_ADMIN'
+  
+  // -- ESTADO --
+  const [groupBy, setGroupBy] = useState<GroupBy>('CATEGORIA')
+  const [selectedTarifa, setSelectedTarifa] = useState<TarifaType>(() => {
+    if (usuario?.tarifaVenta === 'PRECIO_REVENDEDOR') return 'precioRevendedor'
+    if (usuario?.tarifaVenta === 'PRECIO_EMPRESA') return 'precioEmpresa'
+    if (usuario?.tarifaVenta === 'PRECIO_REVENDIDO') return 'precioRevendido'
+    return 'precioFinal'
+  })
+  const [searchQuery, setSearchQuery] = useState('')
   const [vistaInterna, setVistaInterna] = useState(false)
-  const lista = LISTAS_DEMO[inst] ?? []
+  
+  // -- QUERIES --
+  const { data: productos = [], isLoading: loadingProds } = useQuery({
+    queryKey: ['productos-precios'],
+    queryFn: () => productosApi.listar()
+  })
+
+  const { data: instituciones = [] } = useQuery({
+    queryKey: ['instituciones'],
+    queryFn: institucionesApi.listar
+  })
+
+  const { data: categorias = [] } = useQuery({
+    queryKey: ['categorias'],
+    queryFn: categoriasApi.listar
+  })
+
+  const { data: config = {} } = useQuery({ 
+    queryKey: ['config'], 
+    queryFn: configuracionApi.get 
+  })
+
+  // -- LOGICA DE FILTRADO Y AGRUPACION --
+  const groupedData = useMemo(() => {
+    let filtered = productos.filter(p => 
+      p.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.codigoBarra?.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+
+    const groups: Record<string, any[]> = {}
+
+    filtered.forEach(p => {
+      let key = 'GENERAL'
+      let label = 'Productos Generales'
+
+      if (groupBy === 'CATEGORIA') {
+        const cat = categorias.find(c => c.id === p.categoriaId)
+        key = p.categoriaId || 'SIN_CAT'
+        label = cat?.nombre || 'Sin Categoría'
+      } else if (groupBy === 'INSTITUCION') {
+        const inst = instituciones.find(i => i.id === p.institucionId)
+        key = p.institucionId || 'GENERAL'
+        label = inst?.nombre || 'General / Venta Libre'
+      }
+
+      if (!groups[key]) groups[key] = { label, items: [] }
+      groups[key].items.push(p)
+    })
+
+    return Object.values(groups).sort((a, b) => a.label.localeCompare(b.label))
+  }, [productos, searchQuery, groupBy, categorias, instituciones])
+
+  const getTarifaLabel = (t: string) => {
+    switch(t) {
+      case 'precioFinal': return 'Venta Final'
+      case 'precioRevendedor': return 'Revendedor'
+      case 'precioEmpresa': return 'Corporativo'
+      case 'precioRevendido': return 'Revendido'
+      default: return ''
+    }
+  }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-5">
-      <div className="flex items-center justify-between">
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-lg font-medium text-gray-900">Listas de precios</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Precios por institución · actualizados</p>
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
+             <div className="p-3 bg-indigo-600 rounded-2xl shadow-xl shadow-indigo-100">
+               <Tags className="text-white" size={24} />
+             </div>
+             Catálogo de Precios
+          </h1>
+          <p className="text-gray-400 font-bold uppercase text-[10px] tracking-widest mt-2 flex items-center gap-2">
+            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+            Acceso Dinámico • {productos.length} Productos Sincronizados
+          </p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setVistaInterna(v => !v)}
-            className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
-              vistaInterna ? 'bg-gray-900 text-white border-gray-900' : 'bg-white border-gray-200 text-gray-600 hover:border-gray-400'
-            }`}
-          >
-            {vistaInterna ? 'Vista interna' : 'Vista pública'}
+
+        <div className="flex flex-wrap gap-2">
+          {isAdmin && (
+            <button
+              onClick={() => setVistaInterna(v => !v)}
+              className={`px-5 py-3 text-[10px] font-black rounded-2xl border transition-all uppercase tracking-widest flex items-center gap-2 ${
+                vistaInterna 
+                  ? 'bg-gray-900 text-white border-gray-900 shadow-xl shadow-gray-200 scale-105' 
+                  : 'bg-white border-gray-200 text-gray-400 hover:border-indigo-300 hover:text-indigo-600'
+              }`}
+            >
+              {vistaInterna ? <Info size={14}/> : <TrendingUp size={14}/>}
+              {vistaInterna ? 'VISTA RENTABILIDAD' : 'VISTA PÚBLICA'}
+            </button>
+          )}
+          <button className="px-5 py-3 text-[10px] font-black bg-white border border-gray-200 text-gray-400 rounded-2xl hover:border-indigo-300 hover:text-indigo-600 transition-all uppercase tracking-widest flex items-center gap-2">
+            <Download size={14} />
+            PDF
           </button>
-          <button className="px-3 py-1.5 text-sm bg-white border border-gray-200 text-gray-600 rounded-lg hover:border-gray-400 transition-colors">
-            Exportar PDF
-          </button>
+        </div>
+      </header>
+
+      {/* CONTROLES DINÁMICOS */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center bg-white p-4 rounded-[2.5rem] border border-gray-100 shadow-sm">
+        <div className="lg:col-span-4 relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+          <input 
+            placeholder="Buscar por nombre o código..."
+            className="w-full bg-gray-50/50 border-none rounded-2xl pl-12 pr-4 py-4 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        <div className="lg:col-span-4 flex items-center gap-2 bg-gray-50/50 p-1 rounded-2xl border border-gray-100">
+           {(['CATEGORIA', 'INSTITUCION', 'NINGUNO'] as GroupBy[]).map(g => (
+             <button
+               key={g}
+               onClick={() => setGroupBy(g)}
+               className={`flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                 groupBy === g ? 'bg-white text-indigo-600 shadow-md' : 'text-gray-400 hover:text-gray-600'
+               }`}
+             >
+               {g === 'NINGUNO' ? 'PLANO' : g}
+             </button>
+           ))}
+        </div>
+
+        <div className="lg:col-span-4 flex items-center gap-2 bg-indigo-50/30 p-1 rounded-2xl border border-indigo-100">
+           {(['precioFinal', 'precioRevendedor', 'precioEmpresa', 'precioRevendido'] as TarifaType[]).map(t => {
+             const canSee = usuario?.tarifaVenta === 'TODAS' || 
+                            usuario?.tarifaVenta === t.replace('precio', 'PRECIO_').toUpperCase() ||
+                            (t === 'precioFinal' && usuario?.tarifaVenta === 'PRECIO_FINAL') ||
+                            isAdmin;
+             if (!canSee) return null;
+
+             return (
+               <button
+                 key={t}
+                 onClick={() => setSelectedTarifa(t)}
+                 className={`flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                   selectedTarifa === t ? 'bg-indigo-600 text-white shadow-lg' : 'text-indigo-400 hover:text-indigo-600'
+                 }`}
+               >
+                 {t.slice(6)}
+               </button>
+             )
+           })}
         </div>
       </div>
 
-      {/* Selector instituciones */}
-      <div className="flex gap-2 flex-wrap">
-        {INSTITUCIONES.map(i => (
-          <button
-            key={i}
-            onClick={() => setInst(i)}
-            className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
-              inst === i ? 'bg-gray-900 text-white border-gray-900' : 'bg-white border-gray-200 text-gray-600 hover:border-gray-400'
-            }`}
-          >
-            {i}
-          </button>
-        ))}
-        <button className="px-3 py-1.5 text-sm rounded-lg border border-dashed border-gray-300 text-gray-400 hover:border-gray-500 hover:text-gray-600 transition-colors">
-          + Nueva institución
-        </button>
-      </div>
+      {loadingProds && (
+        <div className="flex flex-col items-center justify-center p-20 gap-4">
+          <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic animate-pulse">Sincronizando Catálogo Real...</p>
+        </div>
+      )}
 
-      <div className="grid grid-cols-5 gap-5">
-        {/* Lista principal */}
-        <div className="col-span-3 space-y-4">
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
-              <div>
-                <div className="text-sm font-medium text-gray-900">{inst}</div>
-                <div className="text-xs text-gray-400 mt-0.5">
-                  {vistaInterna ? 'Vista interna — costos y márgenes visibles' : 'Lista pública — solo precios'}
-                </div>
-              </div>
+      {!loadingProds && groupedData.length === 0 && (
+         <div className="bg-white rounded-[3rem] p-20 text-center border border-dashed border-gray-200">
+            <Search className="mx-auto text-gray-200 mb-6" size={64} />
+            <h3 className="text-xl font-black text-gray-900 mb-2 tracking-tight">No encontramos coincidencias</h3>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Ajusta los filtros o intenta con otro término</p>
+         </div>
+      )}
+
+      <div className="space-y-12">
+        {groupedData.map((group) => (
+          <section key={group.label} className="space-y-4">
+            <div className="flex items-center gap-4 group">
+               <div className="h-px bg-gray-100 flex-1" />
+               <h2 className="text-xs font-black text-gray-400 uppercase tracking-[0.3em] italic flex items-center gap-2 group-hover:text-indigo-600 transition-all">
+                 <div className="w-2 h-2 bg-indigo-600 rounded-full shadow-lg shadow-indigo-100" />
+                 {group.label}
+                 <span className="text-[10px] ml-2 px-2 py-0.5 bg-gray-100 rounded-lg text-gray-400 lowercase italic">({group.items.length} skus)</span>
+               </h2>
+               <div className="h-px bg-gray-100 flex-1" />
             </div>
 
-            {lista.map(({ producto, talles }) => (
-              <div key={producto}>
-                <div className="px-5 py-2.5 bg-gray-50/60 border-b border-gray-50">
-                  <span className="text-xs font-medium text-gray-600">{producto}</span>
-                </div>
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-50">
-                      <th className="text-left text-xs font-medium text-gray-400 px-5 py-2">Talle</th>
-                      <th className="text-right text-xs font-medium text-gray-400 px-5 py-2">Precio público</th>
-                      {vistaInterna && <>
-                        <th className="text-right text-xs font-medium text-gray-400 px-5 py-2">Margen</th>
-                      </>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {talles.map(({ talle, precio, margen }) => (
-                      <tr key={talle} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/40">
-                        <td className="px-5 py-2.5 text-sm text-gray-700">{talle}</td>
-                        <td className="px-5 py-2.5 text-sm font-medium text-gray-900 text-right">
-                          {formatCurrency(precio)}
-                        </td>
-                        {vistaInterna && (
-                          <td className="px-5 py-2.5 text-right">
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${margenColor(margen)}`}>
-                              {(margen * 100).toFixed(1)}%
-                            </span>
-                          </td>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {group.items.map((prod: any) => {
+                const precio = prod[selectedTarifa] || 0
+                const costoEstimado = prod.precioFinal * 0.45 // Mock logic if logic helper is not ready
+                // En un sistema real usaríamos el helper industrial
+                const margen = precio > 0 ? (precio - (costoEstimado)) / precio : 0
+
+                return (
+                  <div key={prod.id} className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all group overflow-hidden relative">
+                    {/* Indicador de Institución en vista categoria */}
+                    {groupBy === 'CATEGORIA' && prod.institucionId && (
+                      <div className="absolute top-0 right-0 p-3">
+                        <span className="bg-indigo-50 text-indigo-600 text-[8px] font-black uppercase px-3 py-1 rounded-bl-2xl rounded-tr-lg border border-indigo-100">
+                          {instituciones.find(i => i.id === prod.institucionId)?.nombre}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between items-start mb-6">
+                      <div>
+                        {prod.codigoBarra && (
+                          <span className="text-[10px] font-mono text-gray-300 block mb-1">#{prod.codigoBarra}</span>
                         )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ))}
-          </div>
-        </div>
+                        <h3 className="text-lg font-black text-gray-900 tracking-tight leading-tight group-hover:text-indigo-600 transition-all uppercase">{prod.nombre}</h3>
+                      </div>
+                    </div>
 
-        {/* Comparativo */}
-        <div className="col-span-2">
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-50">
-              <div className="text-sm font-medium text-gray-900">Comparativo</div>
-              <div className="text-xs text-gray-400 mt-0.5">Chomba M/C · entre instituciones</div>
+                    <div className="flex items-center gap-4 mb-8">
+                      <div className="flex-1">
+                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Precio {getTarifaLabel(selectedTarifa)}</span>
+                        <div className="text-3xl font-black text-gray-900 italic tracking-tighter">
+                          {formatCurrency(precio)}
+                        </div>
+                      </div>
+                      
+                      {vistaInterna && (
+                        <div className="text-right">
+                          <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Margen Neto</span>
+                          <span className={`text-xs font-black px-4 py-1.5 rounded-xl border ${margenColor(margen)}`}>
+                            {(margen * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="pt-6 border-t border-gray-50 flex items-center justify-between">
+                      <div className="flex -space-x-2">
+                         {prod.talles?.map((t: any, idx: number) => (
+                           <div key={idx} className="w-8 h-8 rounded-full bg-gray-50 border-2 border-white flex items-center justify-center text-[10px] font-black text-gray-400 uppercase shadow-sm">
+                             {t.talle}
+                           </div>
+                         ))}
+                      </div>
+                      <button className="text-indigo-600 opacity-0 group-hover:opacity-100 transition-all transform translate-x-4 group-hover:translate-x-0">
+                        <ChevronRight size={20} />
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-gray-50">
-                  <th className="text-left font-medium text-gray-400 px-4 py-2.5">Talle</th>
-                  <th className="text-right font-medium text-gray-400 px-2 py-2.5">S.I.</th>
-                  <th className="text-right font-medium text-gray-400 px-2 py-2.5">Eco</th>
-                  <th className="text-right font-medium text-gray-400 px-2 py-2.5">Amanecer</th>
-                  <th className="text-right font-medium text-gray-400 px-2 py-2.5">Palabras</th>
-                </tr>
-              </thead>
-              <tbody>
-                {COMPARATIVO.map(row => {
-                  const precios = [row.si, row.eco, row.amanecer, row.palabras].filter(Boolean) as number[]
-                  const min = Math.min(...precios)
-                  const max = Math.max(...precios)
-                  return (
-                    <tr key={row.talle} className="border-b border-gray-50 last:border-0">
-                      <td className="px-4 py-2.5 font-medium text-gray-700">{row.talle}</td>
-                      {[row.si, row.eco, row.amanecer, row.palabras].map((p, i) => (
-                        <td key={i} className={`px-2 py-2.5 text-right font-medium ${
-                          p == null ? 'text-gray-200' :
-                          p === min ? 'text-teal-600' :
-                          p === max ? 'text-amber-600' : 'text-gray-700'
-                        }`}>
-                          {p ? '$' + (p / 1000).toFixed(1) + 'k' : '—'}
-                        </td>
-                      ))}
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-            <div className="px-4 py-3 border-t border-gray-50 flex gap-3">
-              <span className="flex items-center gap-1 text-xs text-teal-600"><span className="w-2 h-2 rounded-full bg-teal-400 inline-block" />Más bajo</span>
-              <span className="flex items-center gap-1 text-xs text-amber-600"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />Más alto</span>
-            </div>
-          </div>
-        </div>
+          </section>
+        ))}
       </div>
     </div>
   )
 }
-

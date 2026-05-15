@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unifai — Explorador de Módulos</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f3; color: #1a1a1a; min-height: 100vh; padding: 2rem; }
+h1 { font-size: 18px; font-weight: 500; margin-bottom: 6px; color: #1a1a1a; }
+.subtitle { font-size: 13px; color: #888; margin-bottom: 20px; }
+.layout { display: grid; grid-template-columns: 230px 1fr; gap: 0; border: 0.5px solid #ddd; border-radius: 12px; overflow: hidden; min-height: 520px; background: #fff; }
+.sidebar { background: #f8f8f6; border-right: 0.5px solid #ddd; padding: 8px 0; overflow-y: auto; }
+.section-label { font-size: 10px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: #aaa; padding: 12px 14px 4px; }
+.menu-item { display: flex; align-items: center; gap: 8px; padding: 7px 14px; cursor: pointer; transition: background 0.12s; border-left: 2px solid transparent; }
+.menu-item:hover { background: #fff; }
+.menu-item.active { background: #fff; border-left-color: #1D9E75; }
+.dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.menu-label { font-size: 12.5px; color: #1a1a1a; }
+.badge-sm { font-size: 9px; padding: 1px 5px; border-radius: 8px; margin-left: auto; white-space: nowrap; }
+.b-teal { background: #E1F5EE; color: #0F6E56; }
+.b-blue { background: #E6F1FB; color: #185FA5; }
+.b-gray { background: #F1EFE8; color: #5F5E5A; }
+.detail { background: #fff; padding: 22px 24px; overflow-y: auto; }
+.detail-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.detail-title { font-size: 15px; font-weight: 500; color: #1a1a1a; }
+.detail-badge { font-size: 10px; padding: 3px 8px; border-radius: 10px; white-space: nowrap; flex-shrink: 0; margin-top: 2px; }
+.detail-desc { font-size: 13px; color: #666; line-height: 1.6; margin-bottom: 16px; border-left: 2px solid #eee; padding-left: 10px; }
+.sub-title { font-size: 10px; font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase; color: #aaa; margin-bottom: 8px; }
+.sub-list { display: flex; flex-direction: column; gap: 5px; }
+.sub-item { display: flex; align-items: flex-start; gap: 10px; padding: 9px 12px; background: #f8f8f6; border-radius: 8px; border: 0.5px solid #e8e8e8; }
+.sub-icon { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.sub-name { font-size: 13px; font-weight: 500; color: #1a1a1a; margin-bottom: 2px; }
+.sub-desc { font-size: 12px; color: #888; line-height: 1.5; }
+.empty { color: #bbb; font-size: 13px; padding: 60px 0; text-align: center; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #888; }
+.leg-dot { width: 8px; height: 8px; border-radius: 50%; }
+</style>
+</head>
+<body>
+
+<h1>Unifai — Explorador de módulos</h1>
+<p class="subtitle">Hacé clic en cualquier módulo para ver submenús y descripción</p>
+
+<div class="legend">
+  <div class="legend-item"><div class="leg-dot" style="background:#1D9E75"></div> Ya existe / en desarrollo</div>
+  <div class="legend-item"><div class="leg-dot" style="background:#378ADD"></div> Próximo a desarrollar</div>
+  <div class="legend-item"><div class="leg-dot" style="background:#888780"></div> Fase futura</div>
+</div>
+
+<div class="layout">
+  <div class="sidebar" id="sidebar"></div>
+  <div class="detail" id="detail"><div class="empty">Seleccioná un módulo para ver su detalle</div></div>
+</div>
+
+<script>
+const data = [
+  {
+    section: "Principal",
+    items: [
+      { id: "dashboard", label: "Inicio / Dashboard", status: "existe", desc: "Vista general del negocio en tiempo real. Indicadores clave de ventas, stock crítico, pedidos pendientes y caja del día.", subs: [ { name: "Resumen del día", desc: "Ventas, cobros y pedidos del día actual." }, { name: "Alertas de stock", desc: "Productos bajo punto de reposición." }, { name: "Tareas pendientes", desc: "Órdenes sin confirmar, presupuestos vencidos." }, { name: "Accesos rápidos", desc: "Atajos a las secciones más usadas por el usuario." } ] },
+      { id: "catalogo", label: "Catálogo de productos", status: "existe", desc: "ABM completo de productos. Gestión de variantes por talle, color, género. Imágenes, códigos, precios base y ficha técnica.", subs: [ { name: "Alta / edición de producto", desc: "Nombre, código, categoría, descripción, imágenes." }, { name: "Variantes (talle / color)", desc: "Configuración de grillas de talles y colores disponibles." }, { name: "Ficha de costo", desc: "Insumos que componen el producto y su costo unitario." }, { name: "Historial de cambios", desc: "Registro de modificaciones de precio o composición." } ] },
+      { id: "precios", label: "Listas de precios", status: "existe", desc: "Gestión de las 4 listas: Final, Empresas, Reventa y Pasamanos. Cada lista aplica a un tipo de cliente con acceso restringido por rol.", subs: [ { name: "Lista final (consumidor)", desc: "Precio de venta al público general." }, { name: "Lista empresas", desc: "Precio con descuento para clientes corporativos." }, { name: "Lista reventa", desc: "Precio para revendedores habilitados." }, { name: "Lista pasamanos", desc: "Precio mayorista para revendedores de calle." }, { name: "Actualización masiva", desc: "Ajuste por porcentaje o valor fijo a toda la lista." } ] },
+      { id: "presupuestos", label: "Presupuestos", status: "existe", desc: "Generación de presupuestos con asignación de lista de precio según cliente. Conversión directa a pedido u orden de venta.", subs: [ { name: "Nuevo presupuesto", desc: "Carga de productos con escaneo QR o búsqueda." }, { name: "Asignación de lista", desc: "Precio automático según tipo de cliente." }, { name: "Vista previa / PDF", desc: "Generación de documento para enviar al cliente." }, { name: "Conversión a pedido", desc: "Confirmar presupuesto como orden de venta." }, { name: "Seguimiento", desc: "Estado: borrador, enviado, aceptado, vencido." } ] },
+      { id: "ventas", label: "Ventas (mostrador)", status: "existe", desc: "Punto de venta rápido para operaciones de mostrador. Escaneo de productos, descuentos, forma de pago y emisión de comprobante.", subs: [ { name: "Carga de venta", desc: "Escaneo o búsqueda de productos al instante." }, { name: "Descuentos y promociones", desc: "Aplicar descuento por ítem o total." }, { name: "Formas de pago", desc: "Efectivo, transferencia, tarjeta, cuenta corriente." }, { name: "Comprobante", desc: "Emisión de ticket o factura simplificada." } ] },
+      { id: "caja", label: "Caja y cobros", status: "existe", desc: "Control de apertura y cierre de caja. Registro de ingresos y egresos. Arqueo al cierre del día.", subs: [ { name: "Apertura de caja", desc: "Monto inicial y responsable del turno." }, { name: "Movimientos del día", desc: "Ingresos por ventas y egresos manuales." }, { name: "Cierre y arqueo", desc: "Comparación entre sistema y dinero físico." }, { name: "Historial de cierres", desc: "Registro de cierres anteriores con diferencias." } ] },
+      { id: "pedidos", label: "Pedidos y órdenes", status: "existe", desc: "Gestión del ciclo de vida de un pedido: desde la toma hasta la entrega. Vinculado a producción y stock.", subs: [ { name: "Nuevo pedido", desc: "Carga manual o desde presupuesto aprobado." }, { name: "Estados del pedido", desc: "Pendiente, en producción, listo, entregado." }, { name: "Asignación a producción", desc: "Vincula el pedido con una orden de producción." }, { name: "Entrega parcial", desc: "Registrar entregas en cuotas o por ítem." } ] }
+    ]
+  },
+  {
+    section: "Compras y abastecimiento",
+    items: [
+      { id: "proveedores", label: "Proveedores", status: "existe", desc: "ABM de proveedores con datos de contacto, condiciones comerciales e historial de compras.", subs: [ { name: "Alta de proveedor", desc: "Datos fiscales, contacto, categoría y condiciones." }, { name: "Condiciones de pago", desc: "Plazo, forma de pago y descuentos habituales." }, { name: "Historial de compras", desc: "Órdenes emitidas y recepciones por proveedor." } ] },
+      { id: "oc", label: "Órdenes de compra", status: "próximo", desc: "Emisión formal de órdenes de compra a proveedores. Controla qué se pidió, en qué cantidad y a qué precio pactado.", subs: [ { name: "Nueva orden de compra", desc: "Selección de proveedor, ítems, cantidades y precios." }, { name: "Estados de la OC", desc: "Borrador, enviada, parcialmente recibida, cerrada." }, { name: "Aprobación interna", desc: "Flujo opcional de autorización antes de enviar." }, { name: "PDF / envío", desc: "Documento para enviar al proveedor por mail." } ] },
+      { id: "recepcion", label: "Recepción de mercadería", status: "próximo", desc: "Cierre de la orden de compra al ingresar mercadería. Contraste contra lo pedido, actualización automática de stock y generación del pasivo.", subs: [ { name: "Recepción desde OC", desc: "Carga contra orden emitida, valida cantidades." }, { name: "Escaneo QR / código", desc: "Identificación de ítems al momento de ingresar." }, { name: "Diferencias y faltantes", desc: "Registra discrepancias entre pedido y recibido." }, { name: "Actualización de stock", desc: "Ingreso automático al depósito al confirmar." }, { name: "Generación de deuda", desc: "Crea el pasivo en cuenta corriente del proveedor." } ] },
+      { id: "difdev", label: "Diferencias y devoluciones", status: "próximo", desc: "Gestión de mercadería recibida con defectos, diferencias de cantidad o necesidad de devolución al proveedor.", subs: [ { name: "Nota de devolución", desc: "Documento formal para devolver mercadería." }, { name: "Ajuste de stock", desc: "Descuenta automáticamente los ítems devueltos." }, { name: "Nota de crédito esperada", desc: "Registra el crédito pendiente del proveedor." } ] }
+    ]
+  },
+  {
+    section: "Producción y taller",
+    items: [
+      { id: "molderia", label: "Templates de moldería", status: "existe", desc: "Fichas de producción por producto. Define materiales, insumos, tiempos y procesos necesarios para fabricar cada prenda.", subs: [ { name: "Ficha de moldería", desc: "Composición de telas, hilos y avíos por talle." }, { name: "Tiempos de producción", desc: "Estimación de horas por proceso y etapa." }, { name: "Costo de fabricación", desc: "Cálculo automático basado en insumos cargados." } ] },
+      { id: "insumos", label: "Insumos y costos", status: "existe", desc: "Stock y valorización de materias primas. Base para calcular el costo real de producción de cada producto.", subs: [ { name: "ABM de insumos", desc: "Telas, hilos, botones, cierres, avíos, etc." }, { name: "Stock de insumos", desc: "Unidades disponibles y punto de reposición." }, { name: "Precio de insumo", desc: "Valor actualizable con historial de precios." } ] },
+      { id: "stock", label: "Control de stock", status: "existe", desc: "Inventario en tiempo real de productos terminados y materias primas. Movimientos, ajustes y trazabilidad.", subs: [ { name: "Stock por producto/variante", desc: "Unidades disponibles por talle y color." }, { name: "Movimientos de stock", desc: "Entradas, salidas, traslados y ajustes." }, { name: "Inventario físico", desc: "Comparación stock sistema vs real con escaneo." }, { name: "Stock mínimo y alertas", desc: "Notificación cuando un producto alcanza mínimo." } ] },
+      { id: "costeo", label: "Ajustes de costeo", status: "existe", desc: "Recálculo del costo de un producto ante variaciones de insumos. Permite proyectar el impacto en precios de venta.", subs: [ { name: "Recálculo por insumo", desc: "Actualiza costo de todos los productos que lo usan." }, { name: "Simulación de precio", desc: "Proyecta el nuevo precio sugerido de venta." }, { name: "Historial de costos", desc: "Evolución del costo unitario en el tiempo." } ] },
+      { id: "ordenprod", label: "Órdenes de producción", status: "próximo", desc: "Instrucción formal para fabricar. Vincula un pedido con los recursos, insumos y etapas necesarias para completarlo.", subs: [ { name: "Generación desde pedido", desc: "Crea la orden con los ítems confirmados." }, { name: "Asignación de recursos", desc: "Taller, máquinas y operarios asignados." }, { name: "Consumo de insumos", desc: "Descuenta materiales al iniciar producción." }, { name: "Estado de avance", desc: "Porcentaje completado por etapa." } ] },
+      { id: "etapas", label: "Control de etapas / taller", status: "próximo", desc: "Seguimiento paso a paso del proceso productivo. Corte, confección, bordado, terminación, control de calidad.", subs: [ { name: "Etapas configurables", desc: "Define el flujo productivo según tipo de prenda." }, { name: "Registro por operario", desc: "Quién completó cada etapa y cuándo." }, { name: "Incidencias", desc: "Registro de problemas o retrasos por etapa." } ] },
+      { id: "entregaprod", label: "Entrega de producto terminado", status: "próximo", desc: "Cierre de la orden de producción. Ingresa el producto terminado al stock y lo deja disponible para despacho.", subs: [ { name: "Ingreso a stock terminado", desc: "Confirma unidades producidas por variante." }, { name: "Control de calidad final", desc: "Aprobación antes del ingreso al depósito." }, { name: "Vinculación con pedido", desc: "Actualiza el estado del pedido a 'listo para entregar'." } ] }
+    ]
+  },
+  {
+    section: "Especial",
+    items: [
+      { id: "bordados", label: "Alta bordados", status: "existe", desc: "Gestión de diseños de bordado asociados a productos o pedidos. Control de archivos, costos y tiempos.", subs: [ { name: "Ficha de bordado", desc: "Diseño, tamaño, colores de hilo y posición." }, { name: "Costo de bordado", desc: "Precio por unidad bordada según complejidad." }, { name: "Asignación a producto", desc: "Vincula el bordado a un producto o pedido específico." } ] },
+      { id: "terceros", label: "Órdenes a terceros", status: "próximo", desc: "Gestión de trabajos tercerizados a talleres externos. Control de lo que se envía, plazos y condiciones de retorno.", subs: [ { name: "Orden a taller externo", desc: "Qué se envía, cantidad, fecha de entrega pactada." }, { name: "Seguimiento", desc: "Estado: enviado, en proceso, recibido." }, { name: "Recepción desde tercero", desc: "Ingresa los ítems procesados al stock." }, { name: "Costo del servicio", desc: "Registra el gasto para imputar al costo del producto." } ] }
+    ]
+  },
+  {
+    section: "Finanzas y tesorería",
+    items: [
+      { id: "cuentascorrientes", label: "Cuentas corrientes", status: "próximo", desc: "Saldo y movimientos de clientes y proveedores con cuenta abierta. Registro de deudas, pagos y saldo en tiempo real.", subs: [ { name: "Cuenta corriente cliente", desc: "Deuda acumulada, pagos parciales y saldo." }, { name: "Cuenta corriente proveedor", desc: "Pasivos generados por recepciones de mercadería." }, { name: "Estado de cuenta", desc: "Reporte imprimible o por mail para el cliente." }, { name: "Alertas de vencimiento", desc: "Aviso de facturas próximas a vencer." } ] },
+      { id: "bancos", label: "Bancos y movimientos", status: "próximo", desc: "Registro de cuentas bancarias y sus movimientos. Conciliación entre sistema y extracto bancario.", subs: [ { name: "Alta de cuentas bancarias", desc: "CBU, banco, tipo de cuenta." }, { name: "Movimientos bancarios", desc: "Depósitos, extracciones, transferencias." }, { name: "Conciliación bancaria", desc: "Comparación sistema vs extracto del banco." } ] },
+      { id: "pagosprov", label: "Pago a proveedores", status: "próximo", desc: "Registro y gestión de pagos a proveedores. Imputa contra la cuenta corriente y genera el comprobante correspondiente.", subs: [ { name: "Orden de pago", desc: "Selección de facturas a cancelar parcial o total." }, { name: "Forma de pago", desc: "Transferencia, cheque, efectivo." }, { name: "Comprobante de pago", desc: "Documento para enviar al proveedor." }, { name: "Imputación automática", desc: "Actualiza saldo de cuenta corriente del proveedor." } ] },
+      { id: "cashflow", label: "Cash flow", status: "próximo", desc: "Flujo de caja real y proyectado. Muestra ingresos y egresos esperados para los próximos días o semanas.", subs: [ { name: "Flujo real", desc: "Movimientos efectivos registrados en el período." }, { name: "Flujo proyectado", desc: "Ingresos y egresos esperados según pedidos y deudas." }, { name: "Brecha de liquidez", desc: "Identifica días con saldo negativo proyectado." } ] },
+      { id: "proyecciones", label: "Proyecciones financieras", status: "próximo", desc: "Estimaciones de ingresos y rentabilidad a mediano plazo. Basadas en historial de ventas y pedidos en cartera.", subs: [ { name: "Proyección de ventas", desc: "Estimación basada en historial y estacionalidad." }, { name: "Proyección de costos", desc: "Insumos, producción y gastos fijos esperados." }, { name: "Resultado proyectado", desc: "Margen estimado para el período seleccionado." } ] },
+      { id: "sueldos", label: "Sueldos y liquidación", status: "futuro", desc: "Liquidación de haberes del personal. Cálculo de básico, horas extra, descuentos y aportes.", subs: [ { name: "Alta de empleados", desc: "Datos personales, categoría y sueldo básico." }, { name: "Liquidación mensual", desc: "Cálculo automático de remuneraciones y descuentos." }, { name: "Recibo de sueldo", desc: "Generación de recibo firmable digitalmente." } ] },
+      { id: "contabilidad", label: "Contabilidad general", status: "futuro", desc: "Asientos contables automáticos generados por las operaciones del sistema. Libro diario, mayor y balances.", subs: [ { name: "Plan de cuentas", desc: "Configuración del esquema contable del negocio." }, { name: "Asientos automáticos", desc: "Generados por ventas, compras, caja y pagos." }, { name: "Libro diario / mayor", desc: "Registros contables en orden cronológico y por cuenta." }, { name: "Balance general", desc: "Estado patrimonial del negocio." } ] }
+    ]
+  },
+  {
+    section: "Gestión comercial",
+    items: [
+      { id: "clientes", label: "Gestión de clientes", status: "existe", desc: "ABM de clientes con tipo, datos fiscales, lista de precio asignada y condiciones comerciales.", subs: [ { name: "Alta de cliente", desc: "Datos fiscales, contacto, tipo y lista de precio." }, { name: "Tipo de cliente", desc: "Final, empresa, revendedor, pasamanos." }, { name: "Condiciones comerciales", desc: "Descuentos fijos, límite de crédito, plazo de pago." } ] },
+      { id: "histclientes", label: "Historial por cliente", status: "próximo", desc: "Todas las operaciones de un cliente en un solo lugar: compras, presupuestos, pagos y saldo.", subs: [ { name: "Compras realizadas", desc: "Listado de ventas con fecha, monto y estado." }, { name: "Presupuestos enviados", desc: "Historial de cotizaciones y su resultado." }, { name: "Saldo de cuenta corriente", desc: "Deuda acumulada y pagos realizados." } ] },
+      { id: "revendedores", label: "Revendedores (pasamanos)", status: "próximo", desc: "Gestión específica de revendedores de calle. Solo ven los precios de su lista, sin acceso a otras listas.", subs: [ { name: "Alta de revendedor", desc: "Habilitación con acceso restringido a su lista." }, { name: "Pedidos de revendedor", desc: "Carga y seguimiento de pedidos mayoristas." }, { name: "Saldo y pagos", desc: "Cuenta corriente del revendedor." } ] }
+    ]
+  },
+  {
+    section: "Reportes e inteligencia",
+    items: [
+      { id: "repventas", label: "Reportes de ventas", status: "próximo", desc: "Análisis de ventas por período, producto, cliente y canal. Exportable a Excel o PDF.", subs: [ { name: "Ventas por período", desc: "Diario, semanal, mensual y anual." }, { name: "Ventas por producto", desc: "Ranking de los más vendidos." }, { name: "Ventas por cliente", desc: "Facturación acumulada por cliente." }, { name: "Exportación", desc: "Excel, PDF o impresión directa." } ] },
+      { id: "rentabilidad", label: "Rentabilidad por producto", status: "próximo", desc: "Margen real de cada producto comparando precio de venta vs costo de producción actualizado.", subs: [ { name: "Margen por SKU", desc: "Utilidad bruta por producto y variante." }, { name: "Comparativa de listas", desc: "Margen según cada lista de precio." }, { name: "Productos sin margen", desc: "Alertas de ítems que venden por debajo del costo." } ] },
+      { id: "dashexec", label: "Dashboard ejecutivo", status: "futuro", desc: "Vista consolidada de los KPIs del negocio. Ventas, costos, márgenes, stock y flujo de caja en una sola pantalla.", subs: [ { name: "KPIs principales", desc: "Ventas, margen, stock crítico, cobranzas pendientes." }, { name: "Gráficos de tendencia", desc: "Evolución de ventas y costos en el tiempo." }, { name: "Comparativa períodos", desc: "Este mes vs mes anterior o mismo mes año anterior." } ] }
+    ]
+  },
+  {
+    section: "Sistema y administración",
+    items: [
+      { id: "equipo", label: "Gestión de equipo", status: "existe", desc: "Alta de usuarios del sistema con asignación de roles y permisos de acceso por módulo.", subs: [ { name: "Alta de usuarios", desc: "Nombre, mail, contraseña y rol asignado." }, { name: "Roles predefinidos", desc: "Vendedor, depósito, administrador, dueño." }, { name: "Permisos por módulo", desc: "Qué puede ver y editar cada rol." } ] },
+      { id: "admin", label: "Administración", status: "existe", desc: "Configuración general del sistema: datos de la empresa, parámetros de operación y preferencias globales.", subs: [ { name: "Datos de la empresa", desc: "Razón social, CUIT, domicilio, logo." }, { name: "Parámetros generales", desc: "Moneda, redondeo, formato de fechas." }, { name: "Configuración de módulos", desc: "Activar o desactivar módulos contratados." } ] },
+      { id: "cargadatos", label: "Carga de datos", status: "existe", desc: "Importación masiva de productos, clientes y proveedores desde planillas Excel. Facilita la migración inicial.", subs: [ { name: "Importar productos", desc: "Carga masiva desde plantilla Excel con variantes." }, { name: "Importar clientes", desc: "Base de clientes existentes con datos y saldos." }, { name: "Importar proveedores", desc: "Listado de proveedores con condiciones." } ] },
+      { id: "roles", label: "Roles y permisos avanzados", status: "próximo", desc: "Permisos granulares por acción dentro de cada módulo. Define exactamente qué puede hacer cada usuario.", subs: [ { name: "Roles personalizados", desc: "Crea roles propios más allá de los predefinidos." }, { name: "Permisos por acción", desc: "Ver / crear / editar / eliminar por módulo." }, { name: "Auditoría de accesos", desc: "Log de quién hizo qué y cuándo." } ] }
+    ]
+  }
+];
+
+const statusColor = {
+  "existe":  { dot: "#1D9E75", badge: "b-teal", label: "existe" },
+  "próximo": { dot: "#378ADD", badge: "b-blue", label: "próximo" },
+  "futuro":  { dot: "#888780", badge: "b-gray", label: "futuro" }
+};
+
+let selected = null;
+
+function renderSidebar() {
+  const sb = document.getElementById("sidebar");
+  let html = "";
+  data.forEach(sec => {
+    html += `<div class="section-label">${sec.section}</div>`;
+    sec.items.forEach(item => {
+      const s = statusColor[item.status];
+      html += `<div class="menu-item" id="mi-${item.id}" onclick="selectItem('${item.id}')">
+        <div class="dot" style="background:${s.dot}"></div>
+        <span class="menu-label">${item.label}</span>
+        <span class="badge-sm ${s.badge}">${s.label}</span>
+      </div>`;
+    });
+  });
+  sb.innerHTML = html;
+}
+
+function selectItem(id) {
+  let found = null;
+  data.forEach(sec => sec.items.forEach(item => { if (item.id === id) found = item; }));
+  if (!found) return;
+  if (selected) {
+    const prev = document.getElementById("mi-" + selected);
+    if (prev) prev.classList.remove("active");
+  }
+  selected = id;
+  const curr = document.getElementById("mi-" + id);
+  if (curr) curr.classList.add("active");
+  const s = statusColor[found.status];
+  let subsHtml = found.subs.map(sub => `
+    <div class="sub-item">
+      <div class="sub-icon" style="background:${s.dot}"></div>
+      <div>
+        <div class="sub-name">${sub.name}</div>
+        <div class="sub-desc">${sub.desc}</div>
+      </div>
+    </div>`).join("");
+  document.getElementById("detail").innerHTML = `
+    <div class="detail-header">
+      <div class="detail-title">${found.label}</div>
+      <span class="detail-badge ${s.badge}">${s.label}</span>
+    </div>
+    <div class="detail-desc">${found.desc}</div>
+    <div class="sub-title">Submenús y funciones</div>
+    <div class="sub-list">${subsHtml}</div>
+  `;
+}
+
+renderSidebar();
+</script>
+</body>
+</html>
