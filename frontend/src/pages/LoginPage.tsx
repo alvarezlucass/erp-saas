@@ -7,7 +7,7 @@ import { Building2, ChevronRight, Lock, Mail, Rocket, Eye, EyeOff } from 'lucide
 import { Link } from 'react-router-dom'
 
 export function LoginPage() {
-  const [email, setEmail] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -22,7 +22,7 @@ export function LoginPage() {
     setError('')
     setLoading(true)
     try {
-      const data = await authApi.login(email, password)
+      const data = await authApi.login(identifier, password)
       
       // Si tiene varias membresías, mostramos el selector
       if (data.usuario.membresias && data.usuario.membresias.length > 1) {
@@ -33,7 +33,7 @@ export function LoginPage() {
         navigate('/')
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Email o contraseña incorrectos')
+      setError(err.response?.data?.error || 'Usuario o contraseña incorrectos')
     } finally {
       setLoading(false)
     }
@@ -79,12 +79,12 @@ export function LoginPage() {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
                   <label className="flex items-center gap-2 text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
-                    <Mail size={12} /> Email de Usuario
+                    <Mail size={12} /> Email o DNI / Cédula
                   </label>
                   <input 
-                    type="email" value={email} onChange={e => setEmail(e.target.value)} required 
+                    type="text" value={identifier} onChange={e => setIdentifier(e.target.value)} required 
                     className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all"
-                    placeholder="nombre@empresa.com"
+                    placeholder="nombre@empresa.com o DNI"
                   />
                 </div>
                 <div className="space-y-2">

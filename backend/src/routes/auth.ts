@@ -8,7 +8,7 @@ const router = Router()
 const prisma = new PrismaClient()
 
 const loginSchema = z.object({
-  email:    z.string().email(),
+  email:    z.string().min(1), // Puede ser email o DNI/Cédula
   password: z.string().min(1),
 })
 
@@ -17,8 +17,13 @@ router.post('/login', async (req: Request, res: Response) => {
     const { email, password } = loginSchema.parse(req.body)
 
     console.log('[AUTH] Buscando usuario...')
-    const usuario = await prisma.usuario.findUnique({ 
-      where: { email },
+    const usuario = await prisma.usuario.findFirst({ 
+      where: {
+        OR: [
+          { email },
+          { identificadorNacional: email }
+        ]
+      },
       include: { 
         membresias: {
           where: { activo: true },

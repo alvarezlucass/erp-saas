@@ -98,13 +98,13 @@ model ImportacionStaging {
 model Usuario {
   id           String   @id @default(cuid())
   nombre       String
-  email        String   @unique // Identidad Global del usuario
+  email        String?  @unique // Identidad Global del usuario (opcional)
   passwordHash String
   activo       Boolean  @default(true)
   debeCambiarPassword Boolean @default(true)
   creadoEn     DateTime @default(now())
   
-  identificadorNacional String? // DNI / CUIT / RUT (Oculto inicial)
+  identificadorNacional String? @unique // DNI / CUIT / RUT (Oculto inicial, único)
 
   membresias      Membresia[]
   auditoriasCancelacion AuditoriaCancelacion[]

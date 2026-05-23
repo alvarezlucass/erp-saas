@@ -488,8 +488,8 @@ export const configuracionApi = {
 }
 
 export const authApi = {
-  login: (email: string, password: string) =>
-    api.post('/auth/login', { email, password }).then(r => r.data),
+  login: (emailOrDni: string, password: string) =>
+    api.post('/auth/login', { email: emailOrDni, password }).then(r => r.data),
 }
 
 export const usuariosApi = {

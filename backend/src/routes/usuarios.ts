@@ -11,13 +11,17 @@ const prisma = new PrismaClient()
 router.use(authMiddleware)
 
 const usuarioSchema = z.object({
-  nombre:   z.string().min(1),
-  email:    z.string().email(),
-  password: z.string().min(6).optional(),
-  rol:         z.enum(['ADMIN', 'OPERADOR', 'LECTOR']).optional(),
-  tarifaVenta: z.enum(['PRECIO_FINAL', 'PRECIO_REVENDEDOR', 'PRECIO_EMPRESA', 'PRECIO_REVENDIDO', 'TODAS']).optional(),
-  permisos:    z.array(z.string()).optional(),
-  activo:      z.boolean().optional()
+  nombre:                z.string().min(1),
+  email:                 z.string().email().optional().nullable(),
+  identificadorNacional: z.string().min(1).optional().nullable(),
+  password:              z.string().min(4).optional(), // PIN o contraseña corta
+  rol:                   z.enum(['ADMIN', 'OPERADOR', 'LECTOR']).optional(),
+  tarifaVenta:           z.enum(['PRECIO_FINAL', 'PRECIO_REVENDEDOR', 'PRECIO_EMPRESA', 'PRECIO_REVENDIDO', 'TODAS']).optional(),
+  permisos:              z.array(z.string()).optional(),
+  activo:                z.boolean().optional()
+}).refine(data => data.email || data.identificadorNacional, {
+  message: 'Debe ingresar un Email o un DNI/Cédula',
+  path: ['email']
 })
 
 // Listar usuarios de la empresa
@@ -31,6 +35,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
             id: true,
             nombre: true,
             email: true,
+            identificadorNacional: true,
             creadoEn: true
           }
         }
@@ -42,6 +47,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       id: m.usuario.id,
       nombre: m.usuario.nombre,
       email: m.usuario.email,
+      identificadorNacional: m.usuario.identificadorNacional,
       rol: m.rol,
       tarifaVenta: m.tarifaVenta,
       permisos: m.permisos,
@@ -81,14 +87,20 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       })
     }
 
-    let usuario = await prisma.usuario.findUnique({ where: { email: data.email } })
+    let usuario = null
+    if (data.email) {
+      usuario = await prisma.usuario.findUnique({ where: { email: data.email } })
+    } else if (data.identificadorNacional) {
+      usuario = await prisma.usuario.findUnique({ where: { identificadorNacional: data.identificadorNacional } })
+    }
     
     if (!usuario) {
       const passwordHash = await bcrypt.hash(data.password, 10)
       usuario = await prisma.usuario.create({
         data: {
-          nombre:   data.nombre,
-          email:    data.email,
+          nombre:                data.nombre,
+          email:                 data.email || null,
+          identificadorNacional: data.identificadorNacional || null,
           passwordHash,
         }
       })
@@ -110,6 +122,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       id: usuario.id,
       nombre: usuario.nombre,
       email: usuario.email,
+      identificadorNacional: usuario.identificadorNacional,
       rol: membresia.rol,
       tarifaVenta: membresia.tarifaVenta,
       permisos: membresia.permisos,
@@ -142,7 +155,8 @@ router.patch('/:id', async (req: AuthRequest, res: Response) => {
 
     let updateUsuario: any = {
        nombre: data.nombre,
-       email: data.email
+       email: data.email || null,
+       identificadorNacional: data.identificadorNacional || null
     }
 
     if (data.password) {
@@ -164,6 +178,7 @@ router.patch('/:id', async (req: AuthRequest, res: Response) => {
       id: actualizado.id,
       nombre: actualizado.nombre,
       email: actualizado.email,
+      identificadorNacional: actualizado.identificadorNacional,
       rol: membresiaAct.rol,
       tarifaVenta: membresiaAct.tarifaVenta,
       permisos: membresiaAct.permisos,
