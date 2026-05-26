@@ -6,6 +6,7 @@ import { es } from 'date-fns/locale'
 import { ProveedorQuickForm } from '../components/ProveedorQuickForm'
 import { InsumoTipoQuickForm } from '../components/InsumoTipoQuickForm'
 import StockTraceabilityCard from '../components/StockTraceabilityCard'
+import { useAuthStore } from '../store/authStore'
 
 const TIPO_COLORS: Record<string, string> = {
   TELA: 'bg-emerald-50 text-emerald-700 border-emerald-100',
@@ -19,6 +20,8 @@ const TIPO_COLORS: Record<string, string> = {
 
 export function InsumosPage() {
   const qc = useQueryClient()
+  const { usuario } = useAuthStore()
+  const isReadOnly = usuario?.rol === 'LECTOR'
   const [filtroTipo, setFiltroTipo] = useState('')
   const [buscar, setBuscar] = useState('')
   const [editando, setEditando] = useState<Insumo | null>(null)
@@ -147,13 +150,15 @@ export function InsumosPage() {
             Materias Primas · Artículos de Reventa · Trazabilidad
           </p>
         </div>
-        <button 
-          onClick={() => setMostrarAlta(true)}
-          className="bg-gray-900 text-white text-[10px] font-black uppercase tracking-widest px-10 py-5 rounded-full hover:bg-indigo-600 transition-all shadow-2xl shadow-indigo-100 active:scale-95 flex items-center gap-3"
-        >
-          <span>📦</span>
-          + Nuevo Insumo Técnico
-        </button>
+        {!isReadOnly && (
+          <button 
+            onClick={() => setMostrarAlta(true)}
+            className="bg-gray-900 text-white text-[10px] font-black uppercase tracking-widest px-10 py-5 rounded-full hover:bg-indigo-600 transition-all shadow-2xl shadow-indigo-100 active:scale-95 flex items-center gap-3"
+          >
+            <span>📦</span>
+            + Nuevo Insumo Técnico
+          </button>
+        )}
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 mb-10 items-end">
@@ -234,13 +239,17 @@ export function InsumosPage() {
                     <div className="text-[9px] text-gray-400 font-medium">/{i.unidad || 'und'}</div>
                   </td>
                   <td className="px-4 py-3 align-middle text-center" onClick={e => e.stopPropagation()}>
-                    <div className="flex justify-center gap-3">
-                      <button onClick={() => setEditando(i)} className="text-gray-400 hover:text-indigo-600 transition-colors bg-gray-50 hover:bg-indigo-50 px-2 py-1 rounded-lg" title="Editar Ficha"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
-                      <button 
-                        onClick={() => { if(window.confirm('¿Desea eliminar este insumo definitivamente?')) insumosApi.eliminar(i.id).then(() => qc.invalidateQueries({queryKey:['insumos']})) }}
-                        className="text-gray-400 hover:text-red-500 transition-colors bg-gray-50 hover:bg-red-50 px-2 py-1 rounded-lg"
-                      ><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-4v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
-                    </div>
+                    {!isReadOnly ? (
+                      <div className="flex justify-center gap-3">
+                        <button onClick={() => setEditando(i)} className="text-gray-400 hover:text-indigo-600 transition-colors bg-gray-50 hover:bg-indigo-50 px-2 py-1 rounded-lg" title="Editar Ficha"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
+                        <button 
+                          onClick={() => { if(window.confirm('¿Desea eliminar este insumo definitivamente?')) insumosApi.eliminar(i.id).then(() => qc.invalidateQueries({queryKey:['insumos']})) }}
+                          className="text-gray-400 hover:text-red-500 transition-colors bg-gray-50 hover:bg-red-50 px-2 py-1 rounded-lg"
+                        ><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-4v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Solo Vista</span>
+                    )}
                   </td>
                 </tr>
               ))}

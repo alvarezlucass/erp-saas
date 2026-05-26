@@ -15,6 +15,7 @@ import { TallesConfig } from '../components/TallesConfig'
 export function ProductosPage() {
   const qc = useQueryClient()
   const { usuario } = useAuthStore()
+  const isReadOnly = usuario?.rol === 'LECTOR'
   const [tab, setTab] = useState<'catalogo' | 'talles' | 'categorias'>('catalogo')
   const [buscar, setBuscar] = useState('')
   const [filtroCategoria, setFiltroCategoria] = useState('')
@@ -127,7 +128,8 @@ export function ProductosPage() {
                </div>
              )}
 
-             <div className="md:col-span-3 flex flex-col gap-2">
+             {!isReadOnly && (
+               <div className="md:col-span-3 flex flex-col gap-2">
                <Link 
                  to="/productos/alta-retail"
                  className="w-full bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest px-6 py-4 rounded-2xl hover:bg-emerald-500 transition-all shadow-[0_10px_25px_rgba(16,185,129,0.2)] flex items-center justify-center gap-3 active:scale-95"
@@ -141,6 +143,7 @@ export function ProductosPage() {
                  + Alta Industrial (Ficha)
                </Link>
              </div>
+             )}
           </div>
 
           {/* FILTROS AVANZADOS */}
@@ -221,16 +224,21 @@ export function ProductosPage() {
                       </td>
                       <td className="px-8 py-6">
                         <div className="flex justify-center gap-3">
-                          <button onClick={() => setVerFicha(p)} className="bg-white/5 hover:bg-indigo-600 text-gray-500 hover:text-white p-3 rounded-2xl transition-all border border-white/5">👁️</button>
-                          <Link 
-                            to={p.tipo === 'COMPRADO' ? `/productos/${p.id}/editar-retail` : `/productos/${p.id}/editar`} 
-                            className="bg-white/5 hover:bg-emerald-600 text-gray-500 hover:text-white p-3 rounded-2xl transition-all border border-white/5"
-                          >
-                            ✎
-                          </Link>
-                          <button onClick={() => mutacionEstado.mutate(p)} className={`p-3 rounded-2xl border border-white/5 transition-all ${p.activo ? 'bg-white/5 text-gray-500 hover:bg-amber-600 hover:text-white' : 'bg-emerald-600 text-white animate-pulse'}`}>
-                            {p.activo ? '⏸️' : '▶️'}
-                          </button>
+                          <button onClick={() => setVerFicha(p)} className="bg-white/5 hover:bg-indigo-600 text-gray-500 hover:text-white p-3 rounded-2xl transition-all border border-white/5" title="Ver Ficha">👁️</button>
+                          {!isReadOnly && (
+                            <>
+                              <Link 
+                                to={p.tipo === 'COMPRADO' ? `/productos/${p.id}/editar-retail` : `/productos/${p.id}/editar`} 
+                                className="bg-white/5 hover:bg-emerald-600 text-gray-500 hover:text-white p-3 rounded-2xl transition-all border border-white/5"
+                                title="Editar"
+                              >
+                                ✎
+                              </Link>
+                              <button onClick={() => mutacionEstado.mutate(p)} className={`p-3 rounded-2xl border border-white/5 transition-all ${p.activo ? 'bg-white/5 text-gray-500 hover:bg-amber-600 hover:text-white' : 'bg-emerald-600 text-white animate-pulse'}`} title={p.activo ? "Pausar" : "Activar"}>
+                                {p.activo ? '⏸️' : '▶️'}
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>

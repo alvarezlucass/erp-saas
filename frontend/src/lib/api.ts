@@ -455,6 +455,8 @@ export interface Cliente {
 export const clientesApi = {
   listar: (): Promise<Cliente[]> => api.get('/clientes').then(r => r.data),
   crear: (data: Partial<Cliente>): Promise<Cliente> => api.post('/clientes', data).then(r => r.data),
+  editar: (id: string, data: Partial<Cliente>): Promise<Cliente> => api.patch(`/clientes/${id}`, data).then(r => r.data),
+  eliminar: (id: string): Promise<any> => api.delete(`/clientes/${id}`).then(r => r.data),
 }
 
 export interface Institucion {
@@ -490,6 +492,8 @@ export const configuracionApi = {
 export const authApi = {
   login: (emailOrDni: string, password: string) =>
     api.post('/auth/login', { email: emailOrDni, password }).then(r => r.data),
+  registrarEmpresa: (data: any) =>
+    api.post('/auth/register-empresa', data).then(r => r.data),
 }
 
 export const usuariosApi = {
@@ -500,7 +504,9 @@ export const usuariosApi = {
   eliminar: (id: string) => api.delete(`/usuarios/${id}`).then(r => r.data),
   changePassword: (password: string) => api.post('/usuarios/change-password', { password }).then(r => r.data),
   actualizarPreferencias: (preferencias: Record<string, any>) => 
-    api.patch('/usuarios/me/preferencias', { preferencias }).then(r => r.data)
+    api.patch('/usuarios/me/preferencias', { preferencias }).then(r => r.data),
+  resetPassword: (id: string, adminPassword: string) => 
+    api.post<{ temporaryPassword: string }>(`/usuarios/${id}/reset-password`, { adminPassword }).then(r => r.data),
 }
 
 export const comprasApi = {
@@ -516,5 +522,6 @@ export const comprasApi = {
 
 export const empresaApi = {
   getMe: () => api.get('/empresa/me').then(r => r.data),
-  updateMe: (data: any) => api.patch('/empresa/me', data).then(r => r.data)
+  updateMe: (data: any) => api.patch('/empresa/me', data).then(r => r.data),
+  getAbono: () => api.get('/empresa/abono').then(r => r.data),
 }

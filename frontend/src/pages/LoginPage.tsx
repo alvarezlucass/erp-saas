@@ -129,6 +129,18 @@ export function LoginPage() {
                 >
                   {loading ? 'Sincronizando...' : 'Iniciar Sesión'}
                 </button>
+
+                <div className="text-center pt-2">
+                  <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                    ¿Eres nuevo?{' '}
+                  </span>
+                  <Link 
+                    to="/register"
+                    className="text-[10px] font-black text-indigo-400 uppercase tracking-widest hover:text-indigo-300 transition-colors"
+                  >
+                    Registra tu empresa aquí
+                  </Link>
+                </div>
               </form>
             </motion.div>
           ) : (

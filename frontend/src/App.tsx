@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { LoginPage } from './pages/LoginPage'
+import { RegisterPage } from './pages/RegisterPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { InsumosPage } from './pages/InsumosPage'
 import { BordadosPage } from './pages/BordadosPage'
@@ -51,7 +52,41 @@ function SuperAdminRoute({ children }: { children: React.ReactNode }) {
 function Guard({ permission, children }: { permission: string, children: React.ReactNode }) {
   const usuario = useAuthStore(s => s.usuario)
   if (usuario?.rol === 'SUPER_ADMIN' || usuario?.rol === 'CLIENT_ADMIN') return <>{children}</>
-  if (!usuario?.permisos?.includes(permission)) {
+  
+  const userPerms = usuario?.permisos || []
+  
+  // ADMIN tiene acceso total
+  if (userPerms.includes('ADMIN')) return <>{children}</>
+  
+  let hasAccess = false
+  
+  switch (permission) {
+    case 'STOCK':
+      // STOCK es el permiso general de catálogo/compras/inventario.
+      // Permitimos acceso si tiene cualquier permiso relacionado con stock.
+      hasAccess = userPerms.some(p => ['STOCK', 'STOCK_VIEW', 'STOCK_EDIT', 'STOCK_PRICING', 'STOCK_INVENTORY'].includes(p))
+      break
+    case 'VENTAS':
+      // VENTAS es el permiso de presupuestos, ventas mostrador, clientes, etc.
+      hasAccess = userPerms.some(p => ['VENTAS', 'VENTAS_CLIENTES'].includes(p))
+      break
+    case 'CAJA':
+      // CAJA es para cobros y administración.
+      hasAccess = userPerms.some(p => ['CAJA', 'FINANZAS_BASIC'].includes(p))
+      break
+    case 'PRODUCCION':
+      // PRODUCCION es para pedidos, kanban, etapas y bordados.
+      hasAccess = userPerms.some(p => ['PRODUCCION', 'PRODUCCION_TALLER', 'PRODUCCION_SPECIAL'].includes(p))
+      break
+    case 'ADMIN':
+      // ADMIN es para administración de equipo, costeos, importaciones y templates.
+      hasAccess = userPerms.some(p => ['ADMIN', 'STOCK_EDIT'].includes(p))
+      break
+    default:
+      hasAccess = userPerms.includes(permission)
+  }
+
+  if (!hasAccess) {
     toast.error('Acceso denegado: No tienes permiso para esta sección', { id: 'auth-error' })
     return <Navigate to="/" replace />
   }
@@ -76,6 +111,7 @@ export default function App() {
         <Toaster position="top-right" richColors closeButton />
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/" element={
             <PrivateRoute>

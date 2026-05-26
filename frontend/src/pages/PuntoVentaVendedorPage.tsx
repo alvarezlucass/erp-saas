@@ -507,7 +507,7 @@ export default function PuntoVentaVendedorPage() {
                     />
                     {activeSession.searchCli && !activeSession.clienteId && (
                        <div className="absolute top-full left-0 right-0 bg-white shadow-2xl rounded-3xl border border-gray-100 mt-2 z-[60] py-4 max-h-60 overflow-y-auto scrollbar-hide">
-                          {clientes.filter(c => c.nombre.toLowerCase().includes(activeSession.searchCli.toLowerCase())).map((c: any) => (
+                          {clientes.filter(c => c.activo && c.nombre.toLowerCase().includes(activeSession.searchCli.toLowerCase())).map((c: any) => (
                              <button key={c.id} onClick={() => updateActiveSession({ clienteId: c.id, searchCli: `${c.nombre} ${c.apellido || ''}` })} className="w-full px-6 py-3 text-left hover:bg-indigo-50 flex items-center justify-between">
                                 <span className="text-xs font-black text-gray-700 uppercase">{c.nombre} {c.apellido}</span>
                                 <Plus size={12} className="text-indigo-400" />

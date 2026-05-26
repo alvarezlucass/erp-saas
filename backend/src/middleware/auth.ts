@@ -24,6 +24,16 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
     req.rol = payload.rol
     req.empresaId = payload.empresaId
     req.permisos = payload.permisos || []
+
+    // Bloquear escrituras si el rol es LECTOR (Solo Lectura), excepto si es para su propio usuario
+    if (payload.rol === 'LECTOR' && req.method !== 'GET') {
+      const isSelfUpdate = req.originalUrl.startsWith('/api/usuarios/change-password') || 
+                           req.originalUrl.startsWith('/api/usuarios/me/preferencias')
+      if (!isSelfUpdate) {
+        return res.status(403).json({ error: 'Operación no permitida para usuarios de Solo Lectura' })
+      }
+    }
+
     next()
   } catch {
     res.status(401).json({ error: 'Token inválido o expirado' })

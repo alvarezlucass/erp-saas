@@ -25,12 +25,14 @@ import {
   Shield,
   Layers,
   ArrowUpRight,
-  Receipt
+  Receipt,
+  Edit3
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { useAuthStore } from '../store/authStore'
 
 // --- Componentes Auxiliares ---
 
@@ -64,9 +66,24 @@ function StatusBadge({ vencimiento }: { vencimiento?: string | null }) {
 
 export function ClientesPage() {
   const queryClient = useQueryClient()
+  const { usuario } = useAuthStore()
+  const isReadOnly = usuario?.rol === 'LECTOR'
   const [filter, setFilter] = useState('')
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null)
   const [activeTab, setActiveTab] = useState<'info' | 'suscripcion' | 'archivos' | 'pagos'>('info')
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [editingCliente, setEditingCliente] = useState<Cliente | null>(null)
+  const [newCli, setNewCli] = useState({
+    nombre: '',
+    apellido: '',
+    telefono: '',
+    email: '',
+    direccion: '',
+    razonSocial: '',
+    cuit: '',
+    condicionIva: 'CONSUMIDOR_FINAL',
+    tipoFactura: 'B'
+  })
 
   const { data: clientes = [], isLoading } = useQuery({
     queryKey: ['clientes'],
@@ -79,6 +96,98 @@ export function ClientesPage() {
     queryFn: () => presupuestosApi.listar(),
     enabled: !!selectedCliente
   })
+
+  const createMutation = useMutation({
+    mutationFn: clientesApi.crear,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clientes'] })
+      toast.success('Cliente creado correctamente')
+      setIsCreateModalOpen(false)
+      setNewCli({
+        nombre: '',
+        apellido: '',
+        telefono: '',
+        email: '',
+        direccion: '',
+        razonSocial: '',
+        cuit: '',
+        condicionIva: 'CONSUMIDOR_FINAL',
+        tipoFactura: 'B'
+      })
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || 'Error al crear cliente')
+    }
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => clientesApi.editar(id, data),
+    onSuccess: (updatedCliente) => {
+      queryClient.invalidateQueries({ queryKey: ['clientes'] })
+      toast.success('Cliente actualizado correctamente')
+      setIsCreateModalOpen(false)
+      setSelectedCliente(updatedCliente)
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || 'Error al actualizar cliente')
+    }
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: clientesApi.eliminar,
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['clientes'] })
+      toast.success('Cliente dado de baja correctamente')
+      setSelectedCliente(prev => prev && prev.id === id ? { ...prev, activo: false } : prev)
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || 'Error al dar de baja al cliente')
+    }
+  })
+
+  const handleReactivate = (cliente: Cliente) => {
+    if (window.confirm(`¿Desea reactivar al cliente "${cliente.nombre}"?`)) {
+      updateMutation.mutate({ id: cliente.id, data: { activo: true } })
+    }
+  }
+
+  const openCreateModal = () => {
+    setEditingCliente(null)
+    setNewCli({
+      nombre: '',
+      apellido: '',
+      telefono: '',
+      email: '',
+      direccion: '',
+      razonSocial: '',
+      cuit: '',
+      condicionIva: 'CONSUMIDOR_FINAL',
+      tipoFactura: 'B'
+    })
+    setIsCreateModalOpen(true)
+  }
+
+  const openEditModal = (cliente: Cliente) => {
+    setEditingCliente(cliente)
+    setNewCli({
+      nombre: cliente.nombre,
+      apellido: cliente.apellido || '',
+      telefono: cliente.telefono || '',
+      email: cliente.email || '',
+      direccion: cliente.direccion || '',
+      razonSocial: cliente.razonSocial || '',
+      cuit: cliente.cuit || '',
+      condicionIva: cliente.condicionIva || 'CONSUMIDOR_FINAL',
+      tipoFactura: cliente.tipoFactura || 'B'
+    })
+    setIsCreateModalOpen(true)
+  }
+
+  const handleDelete = (cliente: Cliente) => {
+    if (window.confirm(`¿Está seguro de que desea dar de baja al cliente "${cliente.nombre}"?`)) {
+      deleteMutation.mutate(cliente.id)
+    }
+  }
 
   const filteredClientes = clientes.filter(c => 
     c.nombre.toLowerCase().includes(filter.toLowerCase()) || 
@@ -116,10 +225,15 @@ export function ClientesPage() {
                 className="pl-12 pr-6 py-4 bg-gray-50 border-none rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-50 w-64 transition-all shadow-inner"
               />
             </div>
-            <button className="p-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl shadow-xl shadow-indigo-100 transition-all active:scale-95 flex items-center gap-2">
-               <Plus size={20} strokeWidth={3} />
-               <span className="text-xs font-black uppercase tracking-widest hidden lg:block">Alta de Cliente</span>
-            </button>
+            {!isReadOnly && (
+              <button 
+                onClick={openCreateModal}
+                className="p-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl shadow-xl shadow-indigo-100 transition-all active:scale-95 flex items-center gap-2"
+              >
+                 <Plus size={20} strokeWidth={3} />
+                 <span className="text-xs font-black uppercase tracking-widest hidden lg:block">Alta de Cliente</span>
+              </button>
+            )}
           </div>
         </header>
 
@@ -149,7 +263,12 @@ export function ClientesPage() {
                           {cliente.nombre.substring(0, 2).toUpperCase()}
                         </div>
                         <div>
-                          <p className="font-black text-gray-900 group-hover:text-indigo-600 transition-colors leading-tight">{cliente.nombre}</p>
+                          <div className="flex items-center gap-2">
+                            <p className={`font-black group-hover:text-indigo-600 transition-colors leading-tight ${cliente.activo ? 'text-gray-900' : 'text-gray-400 line-through'}`}>{cliente.nombre}</p>
+                            {!cliente.activo && (
+                              <span className="px-1.5 py-0.5 bg-red-50 text-red-600 border border-red-100 rounded text-[8px] font-black uppercase tracking-widest leading-none">Inactivo</span>
+                            )}
+                          </div>
                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">{cliente.razonSocial || 'Persona Física'}</p>
                         </div>
                       </div>
@@ -172,7 +291,7 @@ export function ClientesPage() {
                     )}
                     <td className="px-8 py-6 text-right">
                       <button className="p-2 text-gray-300 hover:text-indigo-600 hover:bg-white rounded-xl transition-all shadow-sm group-hover:shadow-indigo-100/50">
-                        <ChevronRight size={20} spellCheck />
+                        <ChevronRight size={20} />
                       </button>
                     </td>
                   </motion.tr>
@@ -207,9 +326,37 @@ export function ClientesPage() {
                 <div className="flex-1 space-y-1">
                   <h2 className="text-3xl font-black text-gray-900 leading-none">{selectedCliente.nombre}</h2>
                   <div className="flex items-center gap-3">
+                    {!selectedCliente.activo && (
+                      <span className="text-[10px] font-black text-red-500 bg-red-50 px-2.5 py-1 rounded-lg uppercase tracking-widest border border-red-100 animate-pulse">INACTIVO</span>
+                    )}
                     <span className="text-[10px] font-black text-indigo-400 bg-indigo-50/50 px-2.5 py-1 rounded-lg uppercase tracking-widest">{selectedCliente.razonSocial || 'Personal'}</span>
                     <span className="text-[10px] font-black text-gray-400 border border-gray-100 px-2.5 py-1 rounded-lg uppercase tracking-widest">CUIT: {selectedCliente.cuit || 'N/A'}</span>
                   </div>
+                  {!isReadOnly && (
+                    <div className="flex items-center gap-2 mt-3">
+                      <button 
+                        onClick={() => openEditModal(selectedCliente)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 hover:bg-indigo-50 hover:text-indigo-600 text-gray-500 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all border border-gray-100 shadow-sm"
+                      >
+                        <Edit3 size={12} /> Editar
+                      </button>
+                      {selectedCliente.activo ? (
+                        <button 
+                          onClick={() => handleDelete(selectedCliente)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 hover:bg-red-50 hover:text-red-600 text-gray-500 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all border border-gray-100 shadow-sm"
+                        >
+                          <Trash2 size={12} /> Dar de Baja
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={() => handleReactivate(selectedCliente)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 hover:text-emerald-700 text-emerald-600 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all border border-emerald-100 shadow-sm"
+                        >
+                          <CheckCircle2 size={12} /> Reactivar Cliente
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -424,6 +571,180 @@ export function ClientesPage() {
                </button>
             </footer>
           </motion.aside>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL DE ALTA DE CLIENTE */}
+      <AnimatePresence>
+        {isCreateModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCreateModalOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden border border-gray-100 p-8 space-y-6">
+              <div className="flex justify-between items-center border-b border-gray-50 pb-4">
+                <h3 className="text-2xl font-black text-gray-900 leading-tight">
+                  {editingCliente ? 'Editar Cliente' : 'Nuevo Cliente'}
+                </h3>
+                <button onClick={() => setIsCreateModalOpen(false)} className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                  <X size={20} strokeWidth={3} />
+                </button>
+              </div>
+
+              <form onSubmit={(e) => {
+                e.preventDefault()
+                if (editingCliente) {
+                  updateMutation.mutate({ id: editingCliente.id, data: newCli })
+                } else {
+                  createMutation.mutate(newCli)
+                }
+              }} className="space-y-4">
+                
+                <div className="flex gap-4">
+                  <div className="w-1/2 space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Condición IVA</label>
+                    <select 
+                      value={newCli.condicionIva} 
+                      onChange={e => {
+                        const cond = e.target.value
+                        const fact = cond === 'RESPONSABLE_INSCRIPTO' ? 'A' : 'B'
+                        setNewCli({ ...newCli, condicionIva: cond, tipoFactura: fact })
+                      }} 
+                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold shadow-inner outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="CONSUMIDOR_FINAL">Consumidor Final</option>
+                      <option value="RESPONSABLE_INSCRIPTO">Responsable Inscripto</option>
+                      <option value="MONOTRIBUTO">Monotributo</option>
+                      <option value="EXENTO">Exento</option>
+                    </select>
+                  </div>
+                  <div className="w-1/2 space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Factura</label>
+                    <select 
+                      disabled 
+                      value={newCli.tipoFactura} 
+                      className="w-full bg-gray-100 text-gray-400 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none"
+                    >
+                      <option value="B">Factura B</option>
+                      <option value="A">Factura A</option>
+                      <option value="C">Factura C</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <div className="w-1/2 space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Nombre (*)</label>
+                    <input 
+                      required 
+                      type="text" 
+                      value={newCli.nombre} 
+                      onChange={e => setNewCli({ ...newCli, nombre: e.target.value })} 
+                      placeholder="Nombre" 
+                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold shadow-inner outline-none focus:ring-4 focus:ring-indigo-50"
+                    />
+                  </div>
+                  <div className="w-1/2 space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Apellido</label>
+                    <input 
+                      type="text" 
+                      value={newCli.apellido} 
+                      onChange={e => setNewCli({ ...newCli, apellido: e.target.value })} 
+                      placeholder="Apellido" 
+                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold shadow-inner outline-none focus:ring-4 focus:ring-indigo-50"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <div className="w-1/2 space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
+                      Razón Social {(newCli.condicionIva === 'RESPONSABLE_INSCRIPTO' || newCli.condicionIva === 'EXENTO') && '(*)'}
+                    </label>
+                    <input 
+                      required={newCli.condicionIva === 'RESPONSABLE_INSCRIPTO' || newCli.condicionIva === 'EXENTO'}
+                      type="text" 
+                      value={newCli.razonSocial} 
+                      onChange={e => setNewCli({ ...newCli, razonSocial: e.target.value })} 
+                      placeholder="Razón Social" 
+                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold shadow-inner outline-none focus:ring-4 focus:ring-indigo-50"
+                    />
+                  </div>
+                  <div className="w-1/2 space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
+                      CUIT {(newCli.condicionIva === 'RESPONSABLE_INSCRIPTO' || newCli.condicionIva === 'EXENTO') && '(*)'}
+                    </label>
+                    <input 
+                      required={newCli.condicionIva === 'RESPONSABLE_INSCRIPTO' || newCli.condicionIva === 'EXENTO'}
+                      type="text" 
+                      value={newCli.cuit} 
+                      onChange={e => setNewCli({ ...newCli, cuit: e.target.value })} 
+                      placeholder="CUIT" 
+                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold shadow-inner outline-none focus:ring-4 focus:ring-indigo-50"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <div className="w-1/2 space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Teléfono</label>
+                    <input 
+                      type="text" 
+                      value={newCli.telefono} 
+                      onChange={e => setNewCli({ ...newCli, telefono: e.target.value })} 
+                      placeholder="Teléfono" 
+                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold shadow-inner outline-none focus:ring-4 focus:ring-indigo-50"
+                    />
+                  </div>
+                  <div className="w-1/2 space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Email</label>
+                    <input 
+                      type="email" 
+                      value={newCli.email} 
+                      onChange={e => setNewCli({ ...newCli, email: e.target.value })} 
+                      placeholder="correo@empresa.com" 
+                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold shadow-inner outline-none focus:ring-4 focus:ring-indigo-50"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Dirección</label>
+                  <input 
+                    type="text" 
+                    value={newCli.direccion} 
+                    onChange={e => setNewCli({ ...newCli, direccion: e.target.value })} 
+                    placeholder="Dirección completa" 
+                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold shadow-inner outline-none focus:ring-4 focus:ring-indigo-50"
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button 
+                    type="button" 
+                    onClick={() => setIsCreateModalOpen(false)} 
+                    className="flex-1 py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-2xl text-xs font-black uppercase tracking-widest transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    type="submit" 
+                    disabled={
+                      createMutation.isPending || 
+                      updateMutation.isPending || 
+                      !newCli.nombre || 
+                      ((newCli.condicionIva === 'RESPONSABLE_INSCRIPTO' || newCli.condicionIva === 'EXENTO') && (!newCli.razonSocial || !newCli.cuit))
+                    }
+                    className="flex-[2] py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-indigo-100 transition-all disabled:opacity-50"
+                  >
+                    {createMutation.isPending || updateMutation.isPending 
+                      ? 'GUARDANDO...' 
+                      : editingCliente 
+                        ? 'GUARDAR CAMBIOS' 
+                        : 'CREAR CLIENTE'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

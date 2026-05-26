@@ -11,17 +11,14 @@ const prisma = new PrismaClient()
 router.use(authMiddleware)
 
 const usuarioSchema = z.object({
-  nombre:                z.string().min(1),
-  email:                 z.string().email().optional().nullable(),
-  identificadorNacional: z.string().min(1).optional().nullable(),
+  nombre:                z.string().min(1, 'El nombre es obligatorio'),
+  email:                 z.string().email().or(z.literal('')).optional().nullable(),
+  identificadorNacional: z.string().min(1, 'El DNI es obligatorio'),
   password:              z.string().min(4).optional(), // PIN o contraseña corta
   rol:                   z.enum(['ADMIN', 'OPERADOR', 'LECTOR']).optional(),
   tarifaVenta:           z.enum(['PRECIO_FINAL', 'PRECIO_REVENDEDOR', 'PRECIO_EMPRESA', 'PRECIO_REVENDIDO', 'TODAS']).optional(),
   permisos:              z.array(z.string()).optional(),
   activo:                z.boolean().optional()
-}).refine(data => data.email || data.identificadorNacional, {
-  message: 'Debe ingresar un Email o un DNI/Cédula',
-  path: ['email']
 })
 
 // Listar usuarios de la empresa
@@ -65,7 +62,6 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 router.post('/', async (req: AuthRequest, res: Response) => {
   try {
     const data = usuarioSchema.parse(req.body)
-    if (!data.password) return res.status(400).json({ error: 'Password requerido para alta' })
 
     // 1. Validar Límites de Plan
     const empresa = await prisma.empresa.findUnique({
@@ -87,23 +83,49 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       })
     }
 
-    let usuario = null
-    if (data.email) {
-      usuario = await prisma.usuario.findUnique({ where: { email: data.email } })
-    } else if (data.identificadorNacional) {
-      usuario = await prisma.usuario.findUnique({ where: { identificadorNacional: data.identificadorNacional } })
-    }
+    // Normalizar email vacío a null
+    const normalizedEmail = data.email && data.email.trim() !== '' ? data.email.trim() : null
+
+    // Buscar si ya existe el usuario a nivel global por DNI o por Email
+    let usuario = await prisma.usuario.findFirst({
+      where: {
+        OR: [
+          { identificadorNacional: data.identificadorNacional },
+          ...(normalizedEmail ? [{ email: normalizedEmail }] : [])
+        ]
+      }
+    })
     
+    let temporaryPassword = ''
+    let isTempPassword = false
+
     if (!usuario) {
-      const passwordHash = await bcrypt.hash(data.password, 10)
+      let passwordTemp = data.password
+      if (!passwordTemp || passwordTemp.trim() === '') {
+        const rand = Math.floor(1000 + Math.random() * 9000)
+        passwordTemp = `UNIF-${rand}`
+        isTempPassword = true
+        temporaryPassword = passwordTemp
+      }
+
+      const passwordHash = await bcrypt.hash(passwordTemp, 10)
       usuario = await prisma.usuario.create({
         data: {
           nombre:                data.nombre,
-          email:                 data.email || null,
-          identificadorNacional: data.identificadorNacional || null,
+          email:                 normalizedEmail,
+          identificadorNacional: data.identificadorNacional,
           passwordHash,
+          debeCambiarPassword:   true
         }
       })
+    } else {
+      // Si el usuario ya existe globalmente, validar que no tenga ya una membresía en esta empresa
+      const membresiaExistente = await prisma.membresia.findFirst({
+        where: { usuarioId: usuario.id, empresaId: req.empresaId }
+      })
+      if (membresiaExistente) {
+        return res.status(400).json({ error: 'El usuario ya pertenece a esta empresa' })
+      }
     }
 
     // Crear la membresía para este local
@@ -126,7 +148,8 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       rol: membresia.rol,
       tarifaVenta: membresia.tarifaVenta,
       permisos: membresia.permisos,
-      membresiaId: membresia.id
+      membresiaId: membresia.id,
+      ...(isTempPassword ? { temporaryPassword } : {})
     })
   } catch (error) {
     if (error instanceof z.ZodError) return res.status(400).json({ error: error.errors })
@@ -153,13 +176,15 @@ router.patch('/:id', async (req: AuthRequest, res: Response) => {
        activo: data.activo
     }
 
+    const normalizedEmail = data.email && data.email.trim() !== '' ? data.email.trim() : null
+
     let updateUsuario: any = {
        nombre: data.nombre,
-       email: data.email || null,
-       identificadorNacional: data.identificadorNacional || null
+       email: normalizedEmail,
+       identificadorNacional: data.identificadorNacional
     }
 
-    if (data.password) {
+    if (data.password && data.password.trim() !== '') {
        updateUsuario.passwordHash = await bcrypt.hash(data.password, 10)
     }
 
@@ -248,6 +273,69 @@ router.patch('/me/preferencias', async (req: AuthRequest, res: Response) => {
   } catch (error) {
     if (error instanceof z.ZodError) return res.status(400).json({ error: error.errors })
     res.status(500).json({ error: 'Error al actualizar preferencias' })
+  }
+})
+
+// Blanquear clave de un usuario (generar clave temporal con verificación de administrador)
+router.post('/:id/reset-password', async (req: AuthRequest, res: Response) => {
+  try {
+    const { adminPassword } = z.object({ adminPassword: z.string().min(1) }).parse(req.body)
+
+    // 1. Validar que el llamador sea ADMIN o CLIENT_ADMIN en esta empresa
+    const adminMembresia = await prisma.membresia.findFirst({
+      where: { usuarioId: req.usuarioId, empresaId: req.empresaId, activo: true }
+    })
+
+    if (!adminMembresia || (adminMembresia.rol !== 'ADMIN' && adminMembresia.rol !== 'CLIENT_ADMIN')) {
+      return res.status(403).json({ error: 'No tienes permisos para realizar esta acción' })
+    }
+
+    // 2. Verificar la contraseña del administrador actual
+    const adminUsuario = await prisma.usuario.findUnique({
+      where: { id: req.usuarioId }
+    })
+
+    if (!adminUsuario) {
+      return res.status(404).json({ error: 'Usuario administrador no encontrado' })
+    }
+
+    const verifyAdmin = await bcrypt.compare(adminPassword, adminUsuario.passwordHash)
+    if (!verifyAdmin) {
+      return res.status(401).json({ error: 'La contraseña del administrador es incorrecta' })
+    }
+
+    // 3. Verificar que el usuario destino pertenezca a la misma empresa
+    const targetMembresia = await prisma.membresia.findFirst({
+      where: { usuarioId: req.params.id, empresaId: req.empresaId }
+    })
+
+    if (!targetMembresia) {
+      return res.status(404).json({ error: 'El usuario no pertenece a esta empresa' })
+    }
+
+    // No permitir restablecer la contraseña del propietario CLIENT_ADMIN a menos que seas el propio CLIENT_ADMIN
+    if (targetMembresia.rol === 'CLIENT_ADMIN' && adminMembresia.rol !== 'CLIENT_ADMIN') {
+      return res.status(403).json({ error: 'No puedes restablecer la contraseña de un Administrador Principal/Dueño' })
+    }
+
+    // 4. Generar PIN/Contraseña temporal (ej: RESET-4819)
+    const rand = Math.floor(1000 + Math.random() * 9000)
+    const temporaryPassword = `RESET-${rand}`
+    const passwordHash = await bcrypt.hash(temporaryPassword, 10)
+
+    // 5. Actualizar el usuario destino
+    await prisma.usuario.update({
+      where: { id: req.params.id },
+      data: {
+        passwordHash,
+        debeCambiarPassword: true
+      }
+    })
+
+    res.json({ ok: true, temporaryPassword })
+  } catch (error) {
+    if (error instanceof z.ZodError) return res.status(400).json({ error: error.errors })
+    res.status(500).json({ error: 'Error al blanquear la contraseña' })
   }
 })
 

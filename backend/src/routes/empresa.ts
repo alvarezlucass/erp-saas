@@ -2,6 +2,7 @@ import { Router, Response } from 'express'
 import { z } from 'zod'
 import { PrismaClient } from '@prisma/client'
 import { authMiddleware, AuthRequest } from '../middleware/auth'
+import { calcularDetalleAbono } from '../services/suscripcionService'
 
 const router = Router()
 const prisma = new PrismaClient()
@@ -51,6 +52,20 @@ router.patch('/me', async (req: AuthRequest, res: Response) => {
   } catch (error) {
     if (error instanceof z.ZodError) return res.status(400).json({ error: error.errors })
     res.status(500).json({ error: 'Error al actualizar empresa' })
+  }
+})
+
+// GET /api/empresa/abono — Obtener abono detallado con descuento
+router.get('/abono', async (req: AuthRequest, res: Response) => {
+  try {
+    const empresaId = req.empresaId
+    if (!empresaId) return res.status(401).json({ error: 'Empresa no identificada' })
+
+    const abonoDetalle = await calcularDetalleAbono(empresaId)
+    res.json(abonoDetalle)
+  } catch (error: any) {
+    console.error(error)
+    res.status(500).json({ error: error.message || 'Error al obtener detalle del abono' })
   }
 })
 

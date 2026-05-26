@@ -34,7 +34,7 @@ function NuevoPresupuesto({ onClose }: { onClose: () => void }) {
 
   // Nuevo Cliente Rapido
   const [showNuevoCli, setShowNuevoCli] = useState(false)
-  const [newCli, setNewCli] = useState({ nombre: '', apellido: '', telefono: '', email: '', direccion: '', razonSocial: '', cuit: '', condicionIva: 'CONSUMIDOR_FINAL', tipoFactura: 'C' })
+  const [newCli, setNewCli] = useState({ nombre: '', apellido: '', telefono: '', email: '', direccion: '', razonSocial: '', cuit: '', condicionIva: 'CONSUMIDOR_FINAL', tipoFactura: 'B' })
 
   const crearClienteMut = useMutation({
     mutationFn: clientesApi.crear,
@@ -146,35 +146,53 @@ function NuevoPresupuesto({ onClose }: { onClose: () => void }) {
                   <>
                     <select value={clienteId} onChange={e => setClienteId(e.target.value)} className="w-full text-sm font-bold border border-gray-200 rounded-lg px-3 py-2">
                       <option value="">Seleccione o Cree un cliente...</option>
-                      {clientes.map((c: any) => <option key={c.id} value={c.id}>{c.nombre} {c.apellido||''} - {c.condicionIva.replace('_',' ')}</option>)}
+                      {clientes.filter((c: any) => c.activo).map((c: any) => <option key={c.id} value={c.id}>{c.nombre} {c.apellido||''} - {c.condicionIva.replace('_',' ')}</option>)}
                     </select>
                     <button onClick={() => setShowNuevoCli(true)} className="px-3 py-2 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg whitespace-nowrap shrink-0">+ Crear</button>
                   </>
                 ) : (
                   <div className="w-full space-y-3 border border-indigo-100 p-4 rounded-xl bg-white shadow-sm">
                     <div className="flex gap-2">
-                      <select value={newCli.condicionIva} onChange={e => setNewCli({ ...newCli, condicionIva: e.target.value, tipoFactura: e.target.value === 'RESPONSABLE_INSCRIPTO' ? 'A' : 'C' })} className="w-1/2 text-xs font-bold border border-gray-200 px-3 py-2 rounded-lg outline-none">
+                      <select 
+                        value={newCli.condicionIva} 
+                        onChange={e => {
+                          const cond = e.target.value
+                          const fact = cond === 'RESPONSABLE_INSCRIPTO' ? 'A' : 'B'
+                          setNewCli({ ...newCli, condicionIva: cond, tipoFactura: fact })
+                        }} 
+                        className="w-1/2 text-xs font-bold border border-gray-200 px-3 py-2 rounded-lg outline-none"
+                      >
                         <option value="CONSUMIDOR_FINAL">Consumidor Final</option>
                         <option value="RESPONSABLE_INSCRIPTO">Responsable Inscripto</option>
+                        <option value="MONOTRIBUTO">Monotributo</option>
                         <option value="EXENTO">Exento</option>
                       </select>
                       <select disabled value={newCli.tipoFactura} className="w-1/2 text-xs bg-gray-50 text-gray-500 border border-gray-200 px-3 py-2 rounded-lg outline-none">
-                        <option value="C">Factura C</option>
+                        <option value="B">Factura B</option>
                         <option value="A">Factura A</option>
+                        <option value="C">Factura C</option>
                       </select>
                     </div>
                     
                     <div className="flex gap-2">
-                       <input autoFocus placeholder="Nombre" value={newCli.nombre} onChange={e => setNewCli({ ...newCli, nombre: e.target.value })} className="w-1/2 text-sm border-b border-gray-200 px-2 py-1 outline-none font-medium" />
-                       <input placeholder="Apellido" value={newCli.apellido} onChange={e => setNewCli({ ...newCli, apellido: e.target.value })} className="w-1/2 text-sm border-b border-gray-200 px-2 py-1 outline-none" />
+                       <input autoFocus placeholder="Nombre" value={newCli.nombre} onChange={e => setNewCli({ ...newCli, nombre: e.target.value })} className="w-1/2 text-sm border-b border-gray-200 px-2 py-1.5 outline-none font-medium" />
+                       <input placeholder="Apellido" value={newCli.apellido} onChange={e => setNewCli({ ...newCli, apellido: e.target.value })} className="w-1/2 text-sm border-b border-gray-200 px-2 py-1.5 outline-none" />
                     </div>
 
-                    {(newCli.condicionIva === 'RESPONSABLE_INSCRIPTO' || newCli.condicionIva === 'EXENTO') && (
-                      <div className="flex gap-2 pt-2 bg-yellow-50/50 -mx-4 px-4 py-3 border-t border-b border-yellow-100">
-                         <input placeholder="Razón Social (*)" value={newCli.razonSocial} onChange={e => setNewCli({ ...newCli, razonSocial: e.target.value })} className="w-2/3 text-sm border border-yellow-200 rounded px-2 py-1 outline-none font-medium" />
-                         <input placeholder="CUIT (*)" value={newCli.cuit} onChange={e => setNewCli({ ...newCli, cuit: e.target.value })} className="w-1/3 text-sm border border-yellow-200 rounded px-2 py-1 outline-none" />
-                      </div>
-                    )}
+                    <div className="flex gap-2">
+                       <input 
+                         placeholder={newCli.condicionIva === 'RESPONSABLE_INSCRIPTO' || newCli.condicionIva === 'EXENTO' ? "Razón Social (*)" : "Razón Social"} 
+                         value={newCli.razonSocial} 
+                         onChange={e => setNewCli({ ...newCli, razonSocial: e.target.value })} 
+                         className="w-2/3 text-xs border border-gray-200 rounded px-2 py-1.5 outline-none font-medium" 
+                       />
+                       <input 
+                         placeholder={newCli.condicionIva === 'RESPONSABLE_INSCRIPTO' || newCli.condicionIva === 'EXENTO' ? "CUIT (*)" : "CUIT"} 
+                         value={newCli.cuit} 
+                         onChange={e => setNewCli({ ...newCli, cuit: e.target.value })} 
+                         className="w-1/3 text-xs border border-gray-200 rounded px-2 py-1.5 outline-none" 
+                       />
+                    </div>
 
                     <div className="flex gap-2">
                        <input placeholder="Teléfono" value={newCli.telefono} onChange={e => setNewCli({ ...newCli, telefono: e.target.value })} className="w-1/3 text-xs border-b border-gray-200 px-2 py-1 outline-none text-gray-600" />
@@ -183,7 +201,13 @@ function NuevoPresupuesto({ onClose }: { onClose: () => void }) {
 
                     <div className="flex justify-end gap-2 pt-2">
                       <button onClick={() => setShowNuevoCli(false)} className="text-xs text-gray-400 font-medium px-3">Cancelar</button>
-                      <button onClick={() => crearClienteMut.mutate(newCli)} disabled={!newCli.nombre || (newCli.condicionIva==='RESPONSABLE_INSCRIPTO' && (!newCli.razonSocial || !newCli.cuit))} className="text-xs font-bold bg-indigo-500 text-white px-4 py-2 rounded shadow disabled:opacity-50 transition-all">Guardar Cliente</button>
+                      <button 
+                        onClick={() => crearClienteMut.mutate(newCli)} 
+                        disabled={!newCli.nombre || ((newCli.condicionIva === 'RESPONSABLE_INSCRIPTO' || newCli.condicionIva === 'EXENTO') && (!newCli.razonSocial || !newCli.cuit))} 
+                        className="text-xs font-bold bg-indigo-500 text-white px-4 py-2 rounded shadow disabled:opacity-50 transition-all"
+                      >
+                        Guardar Cliente
+                      </button>
                     </div>
                   </div>
                 )}

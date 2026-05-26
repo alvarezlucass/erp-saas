@@ -14,7 +14,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     if (!empresaId) return res.status(401).json({ error: 'Empresa no identificada' })
 
     const clientes = await prisma.cliente.findMany({
-      where: { empresaId, activo: true },
+      where: { empresaId },
       orderBy: { nombre: 'asc' },
     })
     res.json(clientes)
@@ -48,6 +48,54 @@ router.post('/', async (req: AuthRequest, res: Response) => {
   } catch (err) {
     console.error(err)
     res.status(400).json({ error: 'Error al crear cliente' })
+  }
+})
+
+// PATCH /api/clientes/:id
+router.patch('/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const empresaId = req.empresaId
+    if (!empresaId) return res.status(401).json({ error: 'Empresa no identificada' })
+
+    const { id } = req.params
+    const data = req.body
+    const actualizado = await prisma.cliente.update({
+      where: { id, empresaId },
+      data: {
+        nombre: data.nombre,
+        apellido: data.apellido !== undefined ? data.apellido : undefined,
+        telefono: data.telefono !== undefined ? data.telefono : undefined,
+        email: data.email !== undefined ? data.email : undefined,
+        direccion: data.direccion !== undefined ? data.direccion : undefined,
+        razonSocial: data.razonSocial !== undefined ? data.razonSocial : undefined,
+        cuit: data.cuit !== undefined ? data.cuit : undefined,
+        condicionIva: data.condicionIva !== undefined ? data.condicionIva : undefined,
+        tipoFactura: data.tipoFactura !== undefined ? data.tipoFactura : undefined,
+        activo: data.activo !== undefined ? data.activo : undefined,
+      }
+    })
+    res.json(actualizado)
+  } catch (err) {
+    console.error(err)
+    res.status(400).json({ error: 'Error al actualizar cliente' })
+  }
+})
+
+// DELETE /api/clientes/:id
+router.delete('/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const empresaId = req.empresaId
+    if (!empresaId) return res.status(401).json({ error: 'Empresa no identificada' })
+
+    const { id } = req.params
+    await prisma.cliente.update({
+      where: { id, empresaId },
+      data: { activo: false }
+    })
+    res.json({ success: true })
+  } catch (err) {
+    console.error(err)
+    res.status(400).json({ error: 'Error al eliminar cliente' })
   }
 })
 

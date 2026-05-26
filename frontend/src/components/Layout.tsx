@@ -13,6 +13,9 @@ interface MenuItem {
   to: string
   label: string
   color: string
+  permiso?: string
+  rol?: string
+  modulo?: string
 }
 
 const MENU_GROUPS: { title: string; icon: any; items: MenuItem[] }[] = [
@@ -21,84 +24,84 @@ const MENU_GROUPS: { title: string; icon: any; items: MenuItem[] }[] = [
     icon: LayoutGrid,
     items: [
       { to: '/',             label: 'Inicio / Dashboard', color: 'bg-emerald-500' },
-      { to: '/productos',    label: 'Catálogo de productos', color: 'bg-blue-500' },
-      { to: '/precios',      label: 'Listas de precios', color: 'bg-amber-500' },
-      { to: '/presupuestos', label: 'Presupuestos',       color: 'bg-orange-500' },
-      { to: '/punto-venta/vendedor', label: 'Ventas (mostrador)', color: 'bg-pink-500' },
-      { to: '/punto-venta/caja',     label: 'Caja y cobros',      color: 'bg-cyan-600' },
-      { to: '/pedidos',      label: 'Pedidos y órdenes', color: 'bg-purple-500' },
+      { to: '/productos',    label: 'Catálogo de productos', color: 'bg-blue-500', permiso: 'STOCK_VIEW' },
+      { to: '/precios',      label: 'Listas de precios', color: 'bg-amber-500', permiso: 'VENTAS' },
+      { to: '/presupuestos', label: 'Presupuestos',       color: 'bg-orange-500', permiso: 'VENTAS' },
+      { to: '/punto-venta/vendedor', label: 'Ventas (mostrador)', color: 'bg-pink-500', permiso: 'VENTAS' },
+      { to: '/punto-venta/caja',     label: 'Caja y cobros',      color: 'bg-cyan-600', permiso: 'CAJA' },
+      { to: '/pedidos',      label: 'Pedidos y órdenes', color: 'bg-purple-500', permiso: 'PRODUCCION' },
     ]
   },
   {
     title: 'Compras y Abastecimiento',
     icon: ShoppingCart,
     items: [
-      { to: '/proveedores',          label: 'Gestión de Proveedores', color: 'bg-indigo-500' },
-      { to: '/compras/oc',           label: 'Órdenes de Compra',     color: 'bg-indigo-400' },
-      { to: '/compras/recepcion',    label: 'Recepción de Mercadería', color: 'bg-indigo-300' },
-      { to: '/compras/devoluciones', label: 'Diferencias y Devoluciones', color: 'bg-rose-400' },
+      { to: '/proveedores',          label: 'Gestión de Proveedores', color: 'bg-indigo-500', permiso: 'STOCK_INVENTORY' },
+      { to: '/compras/oc',           label: 'Órdenes de Compra',     color: 'bg-indigo-400', permiso: 'STOCK_INVENTORY' },
+      { to: '/compras/recepcion',    label: 'Recepción de Mercadería', color: 'bg-indigo-300', permiso: 'STOCK_INVENTORY' },
+      { to: '/compras/devoluciones', label: 'Diferencias y Devoluciones', color: 'bg-rose-400', permiso: 'STOCK_INVENTORY' },
     ]
   },
   {
     title: 'Producción y Taller',
     icon: Factory,
     items: [
-      { to: '/admin/templates',      label: 'Templates de Moldería', color: 'bg-rose-500' },
-      { to: '/insumos',              label: 'Insumos y Costos',      color: 'bg-teal-500' },
-      { to: '/inventario',           label: 'Control de Stock',      color: 'bg-cyan-500' },
-      { to: '/admin/costeos',        label: 'Ajustes de Costeo',      color: 'bg-indigo-600' },
-      { to: '/produccion/ordenes',   label: 'Órdenes de Producción',  color: 'bg-orange-600' },
-      { to: '/produccion/etapas',    label: 'Control de Etapas / Taller', color: 'bg-amber-600' },
-      { to: '/produccion/entrega',   label: 'Entrega Producto Terminado', color: 'bg-emerald-600' },
+      { to: '/admin/templates',      label: 'Templates de Moldería', color: 'bg-rose-500', permiso: 'STOCK_EDIT' },
+      { to: '/insumos',              label: 'Insumos y Costos',      color: 'bg-teal-500', permiso: 'STOCK_EDIT' },
+      { to: '/inventario',           label: 'Control de Stock',      color: 'bg-cyan-500', permiso: 'STOCK_VIEW' },
+      { to: '/admin/costeos',        label: 'Ajustes de Costeo',      color: 'bg-indigo-600', permiso: 'STOCK_EDIT' },
+      { to: '/produccion/ordenes',   label: 'Órdenes de Producción',  color: 'bg-orange-600', permiso: 'PRODUCCION_TALLER' },
+      { to: '/produccion/etapas',    label: 'Control de Etapas / Taller', color: 'bg-amber-600', permiso: 'PRODUCCION_TALLER' },
+      { to: '/produccion/entrega',   label: 'Entrega Producto Terminado', color: 'bg-emerald-600', permiso: 'PRODUCCION_TALLER' },
     ]
   },
   {
     title: 'Especial',
     icon: Star,
     items: [
-      { to: '/bordados',             label: 'Alta de Bordados',     color: 'bg-violet-500' },
-      { to: '/terceros/ordenes',     label: 'Órdenes a Terceros',   color: 'bg-fuchsia-500' },
+      { to: '/bordados',             label: 'Alta de Bordados',     color: 'bg-violet-500', permiso: 'PRODUCCION_SPECIAL' },
+      { to: '/terceros/ordenes',     label: 'Órdenes a Terceros',   color: 'bg-fuchsia-500', permiso: 'PRODUCCION_SPECIAL' },
     ]
   },
   {
     title: 'Finanzas y Tesorería',
     icon: Wallet,
     items: [
-      { to: '/finanzas/cc',          label: 'Cuentas Corrientes',     color: 'bg-emerald-500' },
-      { to: '/finanzas/bancos',      label: 'Bancos y Movimientos',   color: 'bg-blue-600' },
-      { to: '/finanzas/pagos',       label: 'Pago a Proveedores',     color: 'bg-rose-600' },
-      { to: '/finanzas/cashflow',    label: 'Flujo de Caja (Cashflow)', color: 'bg-cyan-600' },
-      { to: '/finanzas/proyecciones', label: 'Proyecciones Financieras', color: 'bg-teal-600' },
-      { to: '/finanzas/sueldos',     label: 'Sueldos y Liquidación',  color: 'bg-orange-400' },
-      { to: '/finanzas/contabilidad', label: 'Contabilidad General',  color: 'bg-gray-500' },
+      { to: '/finanzas/cc',          label: 'Cuentas Corrientes',     color: 'bg-emerald-500', permiso: 'FINANZAS_BASIC' },
+      { to: '/finanzas/bancos',      label: 'Bancos y Movimientos',   color: 'bg-blue-600', permiso: 'FINANZAS_BASIC' },
+      { to: '/finanzas/pagos',       label: 'Pago a Proveedores',     color: 'bg-rose-600', permiso: 'FINANZAS_BASIC' },
+      { to: '/finanzas/cashflow',    label: 'Flujo de Caja (Cashflow)', color: 'bg-cyan-600', permiso: 'FINANZAS_ADV' },
+      { to: '/finanzas/proyecciones', label: 'Proyecciones Financieras', color: 'bg-teal-600', permiso: 'FINANZAS_ADV' },
+      { to: '/finanzas/sueldos',     label: 'Sueldos y Liquidación',  color: 'bg-orange-400', permiso: 'FINANZAS_ADV' },
+      { to: '/finanzas/contabilidad', label: 'Contabilidad General',  color: 'bg-gray-500', permiso: 'FINANZAS_ADV' },
     ]
   },
   {
     title: 'Gestión Comercial',
     icon: Users,
     items: [
-      { to: '/comercial/clientes',   label: 'Gestión de Clientes',    color: 'bg-blue-500' },
-      { to: '/comercial/historial',  label: 'Historial por Cliente',  color: 'bg-indigo-400' },
-      { to: '/comercial/revendedores', label: 'Revendedores (Pasamanos)', color: 'bg-pink-500' },
+      { to: '/comercial/clientes',   label: 'Gestión de Clientes',    color: 'bg-blue-500', permiso: 'VENTAS_CLIENTES' },
+      { to: '/comercial/historial',  label: 'Historial por Cliente',  color: 'bg-indigo-400', permiso: 'VENTAS_CLIENTES' },
+      { to: '/comercial/revendedores', label: 'Revendedores (Pasamanos)', color: 'bg-pink-500', permiso: 'VENTAS_CLIENTES' },
     ]
   },
   {
     title: 'Reportes e Inteligencia',
     icon: BarChart3,
     items: [
-      { to: '/reportes/ventas',      label: 'Reportes de Ventas',      color: 'bg-emerald-500' },
-      { to: '/reportes/rentabilidad', label: 'Rentabilidad por Producto', color: 'bg-amber-500' },
-      { to: '/reportes/ejecutivo',   label: 'Dashboard Ejecutivo',     color: 'bg-indigo-500' },
+      { to: '/reportes/ventas',      label: 'Reportes de Ventas',      color: 'bg-emerald-500', permiso: 'REPORTES_VIEW' },
+      { to: '/reportes/rentabilidad', label: 'Rentabilidad por Producto', color: 'bg-amber-500', permiso: 'REPORTES_VIEW' },
+      { to: '/reportes/ejecutivo',   label: 'Dashboard Ejecutivo',     color: 'bg-indigo-500', permiso: 'REPORTES_VIEW' },
     ]
   },
   {
     title: 'Sistema y Administración',
     icon: Settings,
     items: [
-      { to: '/admin/usuarios',       label: 'Gestión de Equipo',      color: 'bg-indigo-600' },
-      { to: '/admin',                label: 'Administración Global',  color: 'bg-gray-400' },
-      { to: '/admin/importaciones',  label: 'Carga Masiva de Datos',  color: 'bg-teal-500' },
-      { to: '/admin/roles',          label: 'Roles y Permisos Avanzados', color: 'bg-rose-500' },
+      { to: '/admin/usuarios',       label: 'Gestión de Equipo',      color: 'bg-indigo-600', permiso: 'ADMIN' },
+      { to: '/admin',                label: 'Administración Global',  color: 'bg-gray-400', permiso: 'ADMIN' },
+      { to: '/admin/importaciones',  label: 'Carga Masiva de Datos',  color: 'bg-teal-500', permiso: 'ADMIN' },
+      { to: '/admin/roles',          label: 'Roles y Permisos Avanzados', color: 'bg-rose-500', permiso: 'ADMIN' },
     ]
   }
 ]
@@ -135,9 +138,36 @@ export function Layout() {
     ...group,
     items: group.items.filter(item => {
       if (usuario?.rol === 'SUPER_ADMIN' || usuario?.rol === 'CLIENT_ADMIN') return true
+      
+      const userPerms = usuario?.permisos || []
+      
+      // ADMIN tiene acceso a todo
+      if (userPerms.includes('ADMIN')) return true
+      
       if (item.rol && usuario?.rol !== item.rol) return false
       if (item.modulo && !usuario?.modulos?.includes(item.modulo)) return false
-      if (item.permiso && !usuario?.permisos?.includes(item.permiso)) return false
+      
+      if (item.permiso) {
+        // Mapeos especiales de permisos granulares
+        if (item.permiso === 'STOCK_VIEW' || item.permiso === 'STOCK_EDIT' || item.permiso === 'STOCK_INVENTORY') {
+          return userPerms.some(p => p.startsWith('STOCK'))
+        }
+        if (item.permiso === 'PRODUCCION_TALLER' || item.permiso === 'PRODUCCION_SPECIAL') {
+          return userPerms.some(p => p.startsWith('PRODUCCION'))
+        }
+        if (item.permiso === 'FINANZAS_BASIC' || item.permiso === 'FINANZAS_ADV') {
+          return userPerms.some(p => p.startsWith('FINANZAS')) || userPerms.includes('CAJA')
+        }
+        if (item.permiso === 'VENTAS_CLIENTES') {
+          return userPerms.includes('VENTAS') || userPerms.includes('VENTAS_CLIENTES')
+        }
+        if (item.permiso === 'REPORTES_VIEW') {
+          return userPerms.includes('REPORTES_VIEW')
+        }
+        
+        return userPerms.includes(item.permiso)
+      }
+      
       return true
     })
   })).filter(group => group.items.length > 0)
@@ -185,7 +215,7 @@ export function Layout() {
         </div>
 
         <nav className="flex-1 p-6 space-y-12 overflow-y-auto scrollbar-hide bg-[#0f0f12]">
-          {MENU_GROUPS.map((group) => (
+          {filteredGroups.map((group) => (
             <div key={group.title} className="space-y-4">
               <div className="flex items-center gap-3 px-4">
                  <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.6)]" />

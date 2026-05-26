@@ -14,7 +14,8 @@ import {
   X,
   AlertCircle,
   TrendingUp,
-  Zap
+  Zap,
+  KeyRound
 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 
@@ -25,50 +26,56 @@ const LIMITES_PLANES: Record<string, number> = {
   ENTERPRISE: 999999
 }
 
-// ─── Permisos agrupados por área ────────────────────────────────────────────
+// ─── Permisos agrupados por área (Alineados con el Menú Lateral) ────────────────
 const GRUPOS_PERMISOS = [
   {
-    grupo: 'Comercial',
-    color: 'orange',
-    bgColor: 'bg-orange-50',
-    borderColor: 'border-orange-200',
-    textColor: 'text-orange-700',
-    dotColor: 'bg-orange-400',
-    checkColor: 'bg-orange-500',
+    grupo: 'Principal',
+    color: 'emerald',
+    bgColor: 'bg-emerald-50',
+    borderColor: 'border-emerald-200',
+    textColor: 'text-emerald-700',
+    dotColor: 'bg-emerald-400',
+    checkColor: 'bg-emerald-500',
     permisos: [
       {
         id: 'VENTAS',
-        label: 'Ventas y Presupuestos',
-        desc: 'Crear presupuestos, ver catálogo, listas de precios',
-        incluye: ['Catálogo de Productos', 'Listas de Precios', 'Presupuestos', 'Punto de Venta (Vendedor)']
+        label: 'Ventas y Mostrador',
+        desc: 'Acceso a presupuestos, listas de precios y módulo de venta rápida.',
+        incluye: ['Listas de Precios', 'Presupuestos', 'Ventas (mostrador)']
       },
       {
         id: 'CAJA',
         label: 'Caja y Cobros',
-        desc: 'Procesar cobros en mostrador, ver movimientos de cuentas',
-        incluye: ['Punto de Venta (Cajero)', 'Administración de cuentas', 'Registrar pagos']
+        desc: 'Procesar cobros y movimientos de caja en mostrador.',
+        incluye: ['Caja y cobros']
       },
-    ]
-  },
-  {
-    grupo: 'Producción',
-    color: 'violet',
-    bgColor: 'bg-violet-50',
-    borderColor: 'border-violet-200',
-    textColor: 'text-violet-700',
-    dotColor: 'bg-violet-400',
-    checkColor: 'bg-violet-500',
-    permisos: [
       {
         id: 'PRODUCCION',
-        label: 'Seguimiento Producción',
-        desc: 'Ver y actualizar estados de pedidos, kanban de órdenes',
-        incluye: ['Pedidos y Órdenes', 'Bordados y moldería', 'Ajustes de costeo']
-      },
+        label: 'Pedidos y Órdenes',
+        desc: 'Seguimiento de pedidos de clientes en la pantalla principal.',
+        incluye: ['Pedidos y órdenes']
+      }
     ]
   },
   {
-    grupo: 'Stock e Insumos',
+    grupo: 'Compras y Abastecimiento',
+    color: 'indigo',
+    bgColor: 'bg-indigo-50',
+    borderColor: 'border-indigo-200',
+    textColor: 'text-indigo-700',
+    dotColor: 'bg-indigo-400',
+    checkColor: 'bg-indigo-500',
+    permisos: [
+      {
+        id: 'STOCK_INVENTORY',
+        label: 'Gestión de Proveedores y OC',
+        desc: 'Crear órdenes de compra, registrar recepciones de mercadería y gestionar proveedores.',
+        incluye: ['Gestión de Proveedores', 'Órdenes de Compra', 'Recepción de Mercadería', 'Devoluciones']
+      }
+    ]
+  },
+  {
+    grupo: 'Producción y Taller',
     color: 'teal',
     bgColor: 'bg-teal-50',
     borderColor: 'border-teal-200',
@@ -77,33 +84,101 @@ const GRUPOS_PERMISOS = [
     checkColor: 'bg-teal-500',
     permisos: [
       {
-        id: 'STOCK_VIEW',
-        label: 'Ver Catálogo e Stock',
-        desc: 'Consultar productos, existencias y moldería.',
-        incluye: ['Catálogo de Productos', 'Consulta de Insumos', 'Ver Precios']
-      },
-      {
         id: 'STOCK_EDIT',
-        label: 'Edición de Fichas',
-        desc: 'Crear y modificar productos, talles y componentes.',
-        incluye: ['Alta de Productos', 'Moldería', 'Configuración de Talles']
+        label: 'Fichas de Insumos y Costos',
+        desc: 'Gestionar insumos, moldería y costos de taller.',
+        incluye: ['Insumos y Costos', 'Ajustes de Costeo', 'Templates de Moldería']
       },
       {
-        id: 'STOCK_PRICING',
-        label: 'Gestión de Precios (Compras)',
-        desc: 'Acceso al motor de actualización masiva de precios.',
-        incluye: ['Actualización Masiva', 'Ajustes de Costeo']
+        id: 'STOCK_VIEW',
+        label: 'Control de Stock y Catálogo',
+        desc: 'Visualizar stock actual, catálogo de productos y ajustar existencias.',
+        incluye: ['Catálogo de productos', 'Control de Stock']
       },
       {
-        id: 'STOCK_INVENTORY',
-        label: 'Ajuste de Inventario',
-        desc: 'Realizar movimientos manuales, ingresos por OC y bajas.',
-        incluye: ['Ajustes de stock', 'Recepción de Mercadería', 'Inventario Físico']
-      },
+        id: 'PRODUCCION_TALLER',
+        label: 'Etapas de Producción',
+        desc: 'Actualizar avance de órdenes, kanban y control de entrega de productos.',
+        incluye: ['Órdenes de Producción', 'Control de Etapas / Taller', 'Entrega Producto Terminado']
+      }
     ]
   },
   {
-    grupo: 'Administración',
+    grupo: 'Especial',
+    color: 'violet',
+    bgColor: 'bg-violet-50',
+    borderColor: 'border-violet-200',
+    textColor: 'text-violet-700',
+    dotColor: 'bg-violet-400',
+    checkColor: 'bg-violet-500',
+    permisos: [
+      {
+        id: 'PRODUCCION_SPECIAL',
+        label: 'Alta de Bordados',
+        desc: 'Diseñar y dar de alta bordados, ponchados y moldería avanzada.',
+        incluye: ['Alta de Bordados', 'Órdenes a Terceros']
+      }
+    ]
+  },
+  {
+    grupo: 'Finanzas y Tesorería',
+    color: 'amber',
+    bgColor: 'bg-amber-50',
+    borderColor: 'border-amber-200',
+    textColor: 'text-amber-700',
+    dotColor: 'bg-amber-400',
+    checkColor: 'bg-amber-500',
+    permisos: [
+      {
+        id: 'FINANZAS_BASIC',
+        label: 'Cuentas Corrientes y Movimientos',
+        desc: 'Consultar cuentas corrientes de clientes y proveedores, registrar cobros y pagos.',
+        incluye: ['Cuentas Corrientes', 'Bancos y Movimientos', 'Pago a Proveedores']
+      },
+      {
+        id: 'FINANZAS_ADV',
+        label: 'Flujos y Contabilidad General',
+        desc: 'Acceder a balances, proyecciones financieras, cashflow y liquidaciones de sueldos.',
+        incluye: ['Flujo de Caja (Cashflow)', 'Proyecciones Financieras', 'Sueldos y Liquidación', 'Contabilidad General']
+      }
+    ]
+  },
+  {
+    grupo: 'Gestión Comercial',
+    color: 'blue',
+    bgColor: 'bg-blue-50',
+    borderColor: 'border-blue-200',
+    textColor: 'text-blue-700',
+    dotColor: 'bg-blue-400',
+    checkColor: 'bg-blue-500',
+    permisos: [
+      {
+        id: 'VENTAS_CLIENTES',
+        label: 'Gestión de Clientes y Revendedores',
+        desc: 'Alta de clientes, historial de compras y cuentas de revendedores.',
+        incluye: ['Gestión de Clientes', 'Historial por Cliente', 'Revendedores (Pasamanos)']
+      }
+    ]
+  },
+  {
+    grupo: 'Reportes e Inteligencia',
+    color: 'rose',
+    bgColor: 'bg-rose-50',
+    borderColor: 'border-rose-200',
+    textColor: 'text-rose-700',
+    dotColor: 'bg-rose-400',
+    checkColor: 'bg-rose-500',
+    permisos: [
+      {
+        id: 'REPORTES_VIEW',
+        label: 'Acceso a Reportes',
+        desc: 'Consultar balances de ventas y rentabilidad ejecutiva.',
+        incluye: ['Reportes de Ventas', 'Rentabilidad por Producto', 'Dashboard Ejecutivo']
+      }
+    ]
+  },
+  {
+    grupo: 'Sistema y Administración',
     color: 'indigo',
     bgColor: 'bg-indigo-50',
     borderColor: 'border-indigo-200',
@@ -114,11 +189,11 @@ const GRUPOS_PERMISOS = [
       {
         id: 'ADMIN',
         label: 'Administración Total',
-        desc: 'Configurar sistema, gestionar usuarios y todos los módulos',
-        incluye: ['Gestión de Equipo', 'Templates de Moldería', 'Ajustes de Costeo', 'Todas las secciones']
-      },
+        desc: 'Gestión de equipo de colaboradores, cargas masivas de datos y ajustes generales.',
+        incluye: ['Gestión de Equipo', 'Administración Global', 'Carga Masiva de Datos', 'Roles y Permisos Avanzados']
+      }
     ]
-  },
+  }
 ]
 
 const TODOS_LOS_PERMISOS = GRUPOS_PERMISOS.flatMap(g => g.permisos)
@@ -126,8 +201,8 @@ const PERMISO_GRUPO_MAP: Record<string, typeof GRUPOS_PERMISOS[0]> = {}
 GRUPOS_PERMISOS.forEach(g => g.permisos.forEach(p => { PERMISO_GRUPO_MAP[p.id] = g }))
 
 const ROL_LABELS: Record<string, string> = {
-  CLIENT_ADMIN: 'Dueño / Maestro',
-  OPERADOR: 'Operador',
+  CLIENT_ADMIN: 'Administrador',
+  OPERADOR: 'Operativo',
   LECTOR: 'Solo Lectura',
 }
 
@@ -141,7 +216,7 @@ function PermisoBadge({ permisoId }: { permisoId: string }) {
   )
 }
 
-function UserCard({ u, onEdit, onDelete, currentUserId }: any) {
+function UserCard({ u, onEdit, onDelete, onResetPassword, currentUserId }: any) {
   const [showPermisos, setShowPermisos] = useState(false)
   const isOwner = u.rol === 'CLIENT_ADMIN'
   const isSelf = u.id === currentUserId
@@ -162,12 +237,24 @@ function UserCard({ u, onEdit, onDelete, currentUserId }: any) {
               {u.nombre}
               {isSelf && <span className="ml-2 text-[10px] font-black text-emerald-500 bg-emerald-100 px-3 py-1 rounded-full border border-emerald-200">TÚ</span>}
             </h3>
-            <p className="text-sm text-gray-400 font-medium truncate max-w-[200px]">{u.email}</p>
+            <p className="text-sm text-gray-400 font-medium truncate max-w-[200px]">{u.email || '(Sin email)'}</p>
+            {u.identificadorNacional && (
+              <p className="text-[10px] font-black text-indigo-500 uppercase tracking-wider mt-1.5">
+                DNI: {u.identificadorNacional}
+              </p>
+            )}
           </div>
         </div>
         <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
           {!isOwner && (
             <>
+              <button 
+                onClick={() => onResetPassword(u)} 
+                title="Blanquear Clave"
+                className="p-2.5 text-gray-400 hover:text-amber-500 bg-gray-50 hover:bg-amber-50 rounded-xl transition-all hover:scale-110"
+              >
+                <KeyRound size={18} />
+              </button>
               <button onClick={() => onEdit(u)} className="p-2.5 text-gray-400 hover:text-indigo-600 bg-gray-50 hover:bg-indigo-50 rounded-xl transition-all hover:scale-110">
                 <Shield size={18} />
               </button>
@@ -223,6 +310,7 @@ export default function UsuariosPage() {
 
   const [nombre, setNombre] = useState('')
   const [email, setEmail] = useState('')
+  const [identificadorNacional, setIdentificadorNacional] = useState('')
   const [password, setPassword] = useState('')
   const [rol, setRol] = useState('OPERADOR')
   const [tarifaVenta, setTarifaVenta] = useState('PRECIO_FINAL')
@@ -231,6 +319,14 @@ export default function UsuariosPage() {
   
   const [buscar, setBuscar] = useState('')
 
+  // Estados para blanqueo de clave
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false)
+  const [resetUser, setResetUser] = useState<any>(null)
+  const [adminPasswordVerify, setAdminPasswordVerify] = useState('')
+  const [isResetSuccessModalOpen, setIsResetSuccessModalOpen] = useState(false)
+  const [generatedTempPassword, setGeneratedTempPassword] = useState('')
+  const [isResetPending, setIsResetPending] = useState(false)
+
   const { data: usuarios = [], isLoading: loadingUsuarios } = useQuery({
     queryKey: ['usuarios'],
     queryFn: usuariosApi.listar
@@ -238,7 +334,8 @@ export default function UsuariosPage() {
 
   const usuariosFiltrados = usuarios.filter((u: any) => 
      u.nombre.toLowerCase().includes(buscar.toLowerCase()) ||
-     u.email.toLowerCase().includes(buscar.toLowerCase())
+     (u.email || '').toLowerCase().includes(buscar.toLowerCase()) ||
+     (u.identificadorNacional || '').toLowerCase().includes(buscar.toLowerCase())
   )
 
   const { data: empresa, isLoading: loadingEmpresa } = useQuery({
@@ -249,10 +346,14 @@ export default function UsuariosPage() {
 
   const mutation = useMutation({
     mutationFn: (data: any) => userSel ? usuariosApi.actualizar(userSel.id, data) : usuariosApi.crear(data),
-    onSuccess: () => {
+    onSuccess: (resData: any) => {
       qc.invalidateQueries({ queryKey: ['usuarios'] })
       toast.success(userSel ? 'Usuario actualizado' : 'Usuario creado exitosamente')
       closeModal()
+      if (!userSel && resData?.temporaryPassword) {
+        setGeneratedTempPassword(resData.temporaryPassword)
+        setIsResetSuccessModalOpen(true)
+      }
     },
     onError: (err: any) => toast.error(err.response?.data?.error || 'Error al procesar usuario')
   })
@@ -269,7 +370,8 @@ export default function UsuariosPage() {
     if (user) {
       setUserSel(user)
       setNombre(user.nombre)
-      setEmail(user.email)
+      setEmail(user.email || '')
+      setIdentificadorNacional(user.identificadorNacional || '')
       setRol(user.rol === 'CLIENT_ADMIN' ? 'OPERADOR' : user.rol)
       setTarifaVenta(user.tarifaVenta || 'PRECIO_FINAL')
       setPermisos(user.permisos || [])
@@ -278,6 +380,7 @@ export default function UsuariosPage() {
       setUserSel(null)
       setNombre('')
       setEmail('')
+      setIdentificadorNacional('')
       setPassword('')
       setRol('OPERADOR')
       setTarifaVenta('PRECIO_FINAL')
@@ -414,7 +517,18 @@ export default function UsuariosPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {usuariosFiltrados.map((u: any) => (
-          <UserCard key={u.id} u={u} onEdit={openModal} onDelete={deleteMut.mutate} currentUserId={currentUser?.id} />
+          <UserCard 
+            key={u.id} 
+            u={u} 
+            onEdit={openModal} 
+            onDelete={deleteMut.mutate} 
+            onResetPassword={(user: any) => {
+              setResetUser(user)
+              setAdminPasswordVerify('')
+              setIsResetModalOpen(true)
+            }}
+            currentUserId={currentUser?.id} 
+          />
         ))}
       </div>
 
@@ -427,15 +541,19 @@ export default function UsuariosPage() {
                   <h2 className="text-xl font-black text-gray-900">{userSel ? 'Editar Colaborador' : 'Agregar al Equipo'}</h2>
                   <button onClick={closeModal} className="p-2"><X size={20}/></button>
                </div>
-               <form onSubmit={(e) => { e.preventDefault(); mutation.mutate({ nombre, email, password: password || undefined, rol, tarifaVenta, permisos }) }} className="p-8 space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
+               <form onSubmit={(e) => { e.preventDefault(); mutation.mutate({ nombre, email, identificadorNacional, password: password || undefined, rol, tarifaVenta, permisos }) }} className="p-8 space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                      <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Nombre</label>
-                        <input required value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Nombre" className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold shadow-inner" />
+                        <input required value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Nombre completo" className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold shadow-inner" />
                      </div>
                      <div className="space-y-1">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Email</label>
-                        <input required type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold shadow-inner" />
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">DNI / Identificador</label>
+                        <input required value={identificadorNacional} onChange={e => setIdentificadorNacional(e.target.value)} placeholder="DNI obligatorio" className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold shadow-inner" />
+                     </div>
+                     <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Email (Opcional)</label>
+                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="correo@empresa.com" className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold shadow-inner" />
                      </div>
                   </div>
 
@@ -472,9 +590,9 @@ export default function UsuariosPage() {
                   <div className="space-y-2">
                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Jerarquía / Rol en Sistema</label>
                      <div className="flex gap-2">
-                        <button type="button" onClick={() => setRol('CLIENT_ADMIN')} className={`flex-1 py-3 px-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${rol === 'CLIENT_ADMIN' ? 'bg-indigo-600 text-white shadow-md' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}>Propietario</button>
+                        <button type="button" onClick={() => setRol('CLIENT_ADMIN')} className={`flex-1 py-3 px-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${rol === 'CLIENT_ADMIN' ? 'bg-indigo-600 text-white shadow-md' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}>Administrador</button>
                         <button type="button" onClick={() => setRol('OPERADOR')} className={`flex-1 py-3 px-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${rol === 'OPERADOR' ? 'bg-indigo-600 text-white shadow-md' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}>Operativo</button>
-                        <button type="button" onClick={() => setRol('LECTOR')} className={`flex-1 py-3 px-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${rol === 'LECTOR' ? 'bg-indigo-600 text-white shadow-md' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}>Auditor</button>
+                        <button type="button" onClick={() => setRol('LECTOR')} className={`flex-1 py-3 px-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${rol === 'LECTOR' ? 'bg-indigo-600 text-white shadow-md' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}>Solo Lectura</button>
                      </div>
                   </div>
 
@@ -503,6 +621,104 @@ export default function UsuariosPage() {
                      {mutation.isPending ? 'GUARDANDO...' : 'CONFIRMAR'}
                   </button>
                </form>
+            </motion.div>
+          </div>
+        )}
+        {/* MODAL DE CONFIRMACIÓN DE RESET DE CLAVE */}
+        {isResetModalOpen && resetUser && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsResetModalOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden border border-gray-100 p-8 space-y-6">
+              <div className="text-center space-y-3">
+                <div className="w-16 h-16 bg-amber-500/10 rounded-3xl flex items-center justify-center text-amber-600 mx-auto border border-amber-200">
+                  <KeyRound size={28} />
+                </div>
+                <h3 className="text-2xl font-black text-gray-900 leading-tight">Blanquear Clave</h3>
+                <p className="text-sm text-gray-400 font-medium">
+                  Se generará una contraseña temporal para <strong>{resetUser.nombre}</strong> (DNI: {resetUser.identificadorNacional}).
+                </p>
+              </div>
+
+              <form onSubmit={async (e) => {
+                e.preventDefault()
+                setIsResetPending(true)
+                try {
+                  const res = await usuariosApi.resetPassword(resetUser.id, adminPasswordVerify)
+                  setIsResetModalOpen(false)
+                  setGeneratedTempPassword(res.temporaryPassword)
+                  setIsResetSuccessModalOpen(true)
+                } catch (err: any) {
+                  toast.error(err.response?.data?.error || 'Error al blanquear clave')
+                } finally {
+                  setIsResetPending(false)
+                }
+              }} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Tu Contraseña de Administrador</label>
+                  <input 
+                    required 
+                    type="password" 
+                    value={adminPasswordVerify} 
+                    onChange={e => setAdminPasswordVerify(e.target.value)} 
+                    placeholder="Confirma tu identidad" 
+                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold shadow-inner outline-none focus:ring-4 focus:ring-indigo-50"
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button 
+                    type="button" 
+                    onClick={() => setIsResetModalOpen(false)} 
+                    className="flex-1 py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-2xl text-xs font-black uppercase tracking-widest transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    type="submit" 
+                    disabled={isResetPending}
+                    className="flex-1 py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-amber-100 transition-all disabled:opacity-50"
+                  >
+                    {isResetPending ? 'PROCESANDO...' : 'CONFIRMAR'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+
+        {/* MODAL DE ÉXITO DE RESET DE CLAVE / TEMPORARY PASSWORD */}
+        {isResetSuccessModalOpen && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsResetSuccessModalOpen(false)} className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden border border-gray-100 p-8 space-y-6 text-center">
+              <div className="w-16 h-16 bg-emerald-500/10 rounded-3xl flex items-center justify-center text-emerald-600 mx-auto border border-emerald-200">
+                <Check size={28} />
+              </div>
+              <h3 className="text-2xl font-black text-gray-900 leading-tight">Clave Restablecida</h3>
+              <p className="text-sm text-gray-400 font-medium leading-relaxed">
+                Entrega esta clave temporal de acceso al usuario. Deberá cambiarla obligatoriamente en su primer login.
+              </p>
+
+              <div className="bg-indigo-50/50 border border-indigo-100 rounded-3xl p-6 flex flex-col items-center gap-3 relative group">
+                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Clave Temporal</span>
+                <span className="text-3xl font-black text-indigo-900 font-mono tracking-wider select-all">{generatedTempPassword}</span>
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(generatedTempPassword)
+                    toast.success('Clave copiada al portapapeles')
+                  }}
+                  className="mt-2 text-[10px] font-black text-indigo-600 hover:text-indigo-700 bg-white px-4 py-2 rounded-xl border border-indigo-200 shadow-sm active:scale-95 transition-all"
+                >
+                  COPIAR CLAVE
+                </button>
+              </div>
+
+              <button 
+                onClick={() => setIsResetSuccessModalOpen(false)} 
+                className="w-full py-4 bg-gray-900 hover:bg-gray-800 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-gray-200 transition-all"
+              >
+                ENTENDIDO
+              </button>
             </motion.div>
           </div>
         )}

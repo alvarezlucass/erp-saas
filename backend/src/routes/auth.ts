@@ -100,4 +100,116 @@ router.post('/login', async (req: Request, res: Response) => {
   }
 })
 
+const registerSchema = z.object({
+  nombreDueño: z.string().min(1),
+  email: z.string().email(),
+  password: z.string().min(6),
+  nombreEmpresa: z.string().min(1),
+  cuit: z.string().min(1),
+  modulos: z.array(z.string()).min(1),
+  terminosAceptados: z.boolean().refine(val => val === true, {
+    message: 'Debe aceptar los términos y condiciones'
+  })
+})
+
+// POST /api/auth/register-empresa
+router.post('/register-empresa', async (req: Request, res: Response) => {
+  try {
+    const { nombreDueño, email, password, nombreEmpresa, cuit, modulos } = registerSchema.parse(req.body)
+
+    // Verificar duplicados
+    const usuarioExistente = await prisma.usuario.findUnique({ where: { email } })
+    if (usuarioExistente) {
+      return res.status(400).json({ error: 'El email ya se encuentra registrado' })
+    }
+
+    const empresaExistente = await prisma.empresa.findFirst({
+      where: {
+        OR: [
+          { nombre: nombreEmpresa },
+          { cuit }
+        ]
+      }
+    })
+    if (empresaExistente) {
+      if (empresaExistente.cuit === cuit) {
+        return res.status(400).json({ error: 'El CUIT de la empresa ya se encuentra registrado' })
+      }
+      return res.status(400).json({ error: 'El nombre de la empresa ya se encuentra registrado' })
+    }
+
+    // Hashear contraseña
+    const passwordHash = await bcrypt.hash(password, 10)
+
+    // Crear Empresa, Usuario y Membresia en una transacción
+    const { empresa, usuario, token } = await prisma.$transaction(async (tx) => {
+      // 1. Crear Empresa
+      const nuevaEmpresa = await tx.empresa.create({
+        data: {
+          nombre: nombreEmpresa,
+          cuit,
+          plan: 'BASIC', // Plan inicial por defecto
+          modulos, // Array de módulos seleccionados
+          activa: true
+        }
+      })
+
+      // 2. Crear Usuario
+      const nuevoUsuario = await tx.usuario.create({
+        data: {
+          nombre: nombreDueño,
+          email,
+          passwordHash,
+          activo: true,
+          debeCambiarPassword: false // Lo eligen ellos, no hace falta forzar cambio
+        }
+      })
+
+      // 3. Crear Membresia (puente) con rol SUPER_ADMIN y todos los permisos de inicio
+      await tx.membresia.create({
+        data: {
+          usuarioId: nuevoUsuario.id,
+          empresaId: nuevaEmpresa.id,
+          rol: 'SUPER_ADMIN',
+          permisos: ['ADMIN', 'VENTAS', 'CAJA', 'PRODUCCION_TALLER', 'FINANZAS_COMPLETA', 'COMPRAS'],
+          activo: true
+        }
+      })
+
+      // Generar JWT Token
+      const jwtToken = jwt.sign(
+        { 
+          usuarioId: nuevoUsuario.id, 
+          rol: 'SUPER_ADMIN', 
+          empresaId: nuevaEmpresa.id,
+          permisos: ['ADMIN', 'VENTAS', 'CAJA', 'PRODUCCION_TALLER', 'FINANZAS_COMPLETA', 'COMPRAS']
+        },
+        process.env.JWT_SECRET || 'dev-secret',
+        { expiresIn: '7d' }
+      )
+
+      return { empresa: nuevaEmpresa, usuario: nuevoUsuario, token: jwtToken }
+    })
+
+    res.json({
+      token,
+      usuario: {
+        id: usuario.id,
+        nombre: usuario.nombre,
+        email: usuario.email,
+        rol: 'SUPER_ADMIN',
+        permisos: ['ADMIN', 'VENTAS', 'CAJA', 'PRODUCCION_TALLER', 'FINANZAS_COMPLETA', 'COMPRAS'],
+        debeCambiarPassword: false,
+        empresaId: empresa.id,
+        modulos: empresa.modulos,
+        preferencias: {}
+      }
+    })
+  } catch (error) {
+    console.error('[REGISTER ERROR]', error)
+    if (error instanceof z.ZodError) return res.status(400).json({ error: error.errors })
+    res.status(500).json({ error: 'Error al registrar empresa' })
+  }
+})
+
 export default router
