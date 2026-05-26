@@ -266,6 +266,7 @@ function GrillaMedidas({
           </div>
         </>
       )}
+    </div>
   )
 }
 
@@ -402,10 +403,10 @@ export function CategoriasPage() {
       {/* ── Header ── */}
       <div className="flex items-center justify-between mb-10">
         <div>
-          <h1 className="text-4xl font-black text-gray-900 uppercase tracking-tighter italic leading-none">
+          <h1 className="text-4xl font-black text-white uppercase tracking-tighter italic leading-none bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">
             Gestión de Talles
           </h1>
-          <p className="text-[11px] text-indigo-500 font-black uppercase tracking-[0.4em] mt-3 bg-indigo-50 w-fit px-3 py-1 rounded-lg italic">
+          <p className="text-[10px] text-indigo-400 font-black uppercase tracking-[0.2em] mt-3 bg-indigo-500/10 border border-indigo-500/20 w-fit px-3.5 py-1.5 rounded-xl italic">
             Definición Industrial · Modelos y Variantes
           </p>
         </div>
@@ -415,15 +416,15 @@ export function CategoriasPage() {
 
         {/* ── FORMULARIO lateral ── */}
         <div className="lg:col-span-4">
-          <div className="bg-white rounded-3xl p-7 border border-gray-100 shadow-lg sticky top-8">
-            <h3 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-7 flex items-center gap-2">
+          <div className="bg-zinc-900/50 rounded-3xl p-7 border border-zinc-800/80 backdrop-blur-xl shadow-xl sticky top-8">
+            <h3 className="text-[10px] font-black uppercase text-zinc-400 tracking-widest mb-7 flex items-center gap-2">
               <span className="w-2 h-2 bg-indigo-500 rounded-full" />
               {editId ? 'Editando Template' : 'Nuevo Template Maestro'}
             </h3>
 
             <form onSubmit={handleGuardar} className="space-y-5">
               <div>
-                <label className="block text-[9px] font-black uppercase text-gray-400 mb-1.5 ml-1">
+                <label className="block text-[9px] font-black uppercase text-zinc-400 mb-1.5 ml-1">
                   Nombre del Modelo / Estilo
                 </label>
                 <input
@@ -431,51 +432,51 @@ export function CategoriasPage() {
                   value={nombre}
                   onChange={e => setNombre(e.target.value)}
                   placeholder="Ej: Chomba Piquet"
-                  className="w-full bg-gray-50 border-none rounded-2xl p-4 text-sm font-black outline-none focus:ring-2 focus:ring-indigo-100"
+                  className="w-full bg-zinc-950/60 border border-zinc-800/80 rounded-2xl p-4 text-sm font-black text-white placeholder-zinc-500 outline-none focus:ring-2 focus:ring-indigo-500/50"
                 />
               </div>
 
               <div>
-                <label className="block text-[9px] font-black uppercase text-gray-400 mb-1.5 ml-1">
+                <label className="block text-[9px] font-black uppercase text-zinc-400 mb-1.5 ml-1">
                   Dependencia (estilo hijo de)
                 </label>
                 <div className="flex gap-2">
                   <select
                     value={parentId || ''}
                     onChange={e => setParentId(e.target.value || null)}
-                    className="flex-1 bg-gray-50 border-none rounded-2xl p-4 text-sm font-black uppercase outline-none focus:ring-2 focus:ring-indigo-100"
+                    className="flex-1 bg-zinc-950/60 border border-zinc-800/80 rounded-2xl p-4 text-sm font-black text-white uppercase outline-none focus:ring-2 focus:ring-indigo-500/50"
                   >
-                    <option value="">Modelo Principal (Master)</option>
-                    {masterCategories.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                    <option value="" className="bg-zinc-900">Modelo Principal (Master)</option>
+                    {masterCategories.map(c => <option key={c.id} value={c.id} className="bg-zinc-900">{c.nombre}</option>)}
                   </select>
                   <button 
                     type="button"
                     onClick={() => setMostrandoQuickPadre(!mostrandoQuickPadre)}
-                    className={`px-4 rounded-2xl transition-all font-black text-lg ${mostrandoQuickPadre ? 'bg-red-50 text-red-500' : 'bg-indigo-600 text-white shadow-lg'}`}
+                    className={`px-4 rounded-2xl transition-all font-black text-lg ${mostrandoQuickPadre ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'}`}
                   >
                     {mostrandoQuickPadre ? '✕' : '+'}
                   </button>
                 </div>
 
                 {mostrandoQuickPadre && (
-                  <div className="mt-4 p-5 bg-indigo-50/50 rounded-2xl border border-indigo-100 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <p className="text-[10px] font-black uppercase text-indigo-500 tracking-widest italic">Nueva Dependencia Maestra</p>
+                  <div className="mt-4 p-5 bg-zinc-950/60 rounded-2xl border border-zinc-800 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <p className="text-[10px] font-black uppercase text-indigo-400 tracking-widest italic">Nueva Dependencia Maestra</p>
                     <input 
                       value={nuevoPadreNombre}
                       onChange={e => setNuevoPadreNombre(e.target.value)}
                       placeholder="Nombre (ej: CALZADO, ACCESORIO)"
-                      className="w-full bg-white border-none rounded-xl px-4 py-3 text-xs font-black uppercase outline-none focus:ring-2 focus:ring-indigo-200"
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-xs font-black text-white placeholder-zinc-500 uppercase outline-none focus:ring-2 focus:ring-indigo-500/50"
                     />
                     <input 
                       value={nuevoPadrePuntos}
                       onChange={e => setNuevoPadrePuntos(e.target.value)}
                       placeholder="Puntos de medición (sep. por coma)"
-                      className="w-full bg-white border-none rounded-xl px-4 py-3 text-[10px] font-bold outline-none focus:ring-2 focus:ring-indigo-200"
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-[10px] font-bold text-white placeholder-zinc-500 outline-none focus:ring-2 focus:ring-indigo-500/50"
                     />
                     <button 
                       type="button"
                       onClick={handleCrearPadreRapido}
-                      className="w-full bg-indigo-600 text-white text-[10px] font-black uppercase py-3 rounded-xl hover:bg-indigo-700 shadow-md"
+                      className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-black uppercase py-3 rounded-xl shadow-md transition-colors"
                     >
                       Registrar y Vincular
                     </button>
@@ -485,16 +486,16 @@ export function CategoriasPage() {
 
               {!parentId && (
                 <div>
-                  <label className="block text-[9px] font-black uppercase text-gray-400 mb-1.5 ml-1">
+                  <label className="block text-[9px] font-black uppercase text-zinc-400 mb-1.5 ml-1">
                     Puntos de Medición (separados por coma)
                   </label>
                   <textarea
                     value={puntos}
                     onChange={e => setPuntos(e.target.value)}
                     placeholder="Sisa, Largo Total, Manga, Hombros..."
-                    className="w-full bg-gray-50 border-none rounded-2xl p-4 text-sm font-black outline-none focus:ring-2 focus:ring-indigo-100 min-h-[90px]"
+                    className="w-full bg-zinc-950/60 border border-zinc-800/80 rounded-2xl p-4 text-sm font-black text-white placeholder-zinc-500 outline-none focus:ring-2 focus:ring-indigo-500/50 min-h-[90px]"
                   />
-                  <p className="text-[9px] text-gray-400 mt-1.5 italic">
+                  <p className="text-[9px] text-zinc-500 mt-1.5 italic">
                     Los estilos hijos heredarán estos puntos automáticamente.
                   </p>
                 </div>
@@ -502,14 +503,14 @@ export function CategoriasPage() {
 
               <div className="flex gap-3 pt-2">
                 {editId && (
-                  <button type="button" onClick={resetForm} className="flex-1 text-xs font-black uppercase text-gray-400 hover:text-gray-600 transition-colors">
+                  <button type="button" onClick={resetForm} className="flex-1 text-xs font-black uppercase text-zinc-400 hover:text-white transition-colors">
                     Cancelar
                   </button>
                 )}
                 <button
                   type="submit"
                   disabled={mutation.isPending}
-                  className="flex-[2] bg-gray-900 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg active:scale-95 disabled:opacity-50"
+                  className="flex-[2] bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-indigo-500/20 active:scale-95 disabled:opacity-50"
                 >
                   {mutation.isPending ? 'Guardando...' : editId ? 'Actualizar Template' : 'Crear Template'}
                 </button>
@@ -521,12 +522,12 @@ export function CategoriasPage() {
               <button
                 type="button"
                 onClick={() => setPanelAbierto(v => !v)}
-                className="w-full mt-5 flex items-center justify-between px-5 py-3.5 rounded-2xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 transition-all group"
+                className="w-full mt-5 flex items-center justify-between px-5 py-3.5 rounded-2xl bg-indigo-950/40 hover:bg-indigo-900/40 border border-indigo-900/50 text-indigo-400 hover:text-indigo-300 transition-all group"
               >
-                <span className="text-[9px] font-black uppercase text-indigo-600 tracking-widest">
+                <span className="text-[9px] font-black uppercase tracking-widest">
                   📐 Cargar Especificaciones de Medidas
                 </span>
-                <span className="text-indigo-400 text-xs group-hover:text-indigo-600 transition-colors">
+                <span className="text-indigo-400 text-xs group-hover:text-indigo-300 transition-colors">
                   {panelAbierto ? '▲' : '▼'}
                 </span>
               </button>
@@ -535,7 +536,7 @@ export function CategoriasPage() {
         </div>
 
         {/* ── LISTADO + GRILLA ── */}
-        <div className="lg:col-span-8 space-y-5">
+        <div className="lg:col-span-8 space-y-6">
 
           {/* Grilla de medidas (aparece cuando hay editId y panelAbierto) */}
           {editId && panelAbierto && (
@@ -554,123 +555,125 @@ export function CategoriasPage() {
             </div>
           )}
 
-          {/* Tarjetas Master */}
-          {masterCategories.map(master => (
-            <div
-              key={master.id}
-              className={`bg-white rounded-2xl border transition-all ${
-                editId === master.id
-                  ? 'border-indigo-300 shadow-lg shadow-indigo-50'
-                  : 'border-gray-100 shadow-sm hover:border-gray-200 hover:shadow-md'
-              }`}
-            >
-              {/* Header del master */}
-              <div className="flex items-start justify-between px-6 py-5 border-b border-gray-50">
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="shrink-0 bg-indigo-600 text-white text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-tighter italic">
-                    Master
-                  </span>
-                  <h2 className="text-base font-black text-gray-900 uppercase tracking-tight italic truncate">
-                    {master.nombre}
-                  </h2>
-                </div>
-
-                {/* Acciones del master */}
-                <div className="flex items-center gap-1 shrink-0 ml-4">
-                  <button
-                    title="Editar template"
-                    onClick={() => editId === master.id ? resetForm() : abrirEdicion(master)}
-                    className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all ${
-                      editId === master.id
-                        ? 'bg-indigo-100 text-indigo-600'
-                        : 'bg-gray-50 text-gray-400 hover:bg-indigo-50 hover:text-indigo-600'
-                    }`}
-                  >
-                    ✎
-                  </button>
-                  <button
-                    title="Inactivar template"
-                    onClick={() => {
-                      if (window.confirm(`¿Inactivar "${master.nombre}"? Dejará de aparecer en el sistema pero no se eliminará.`))
-                        inactivarMut.mutate(master.id)
-                    }}
-                    className="w-8 h-8 rounded-xl flex items-center justify-center text-sm bg-gray-50 text-gray-400 hover:bg-amber-50 hover:text-amber-500 transition-all"
-                  >
-                    ⊘
-                  </button>
-                  <button
-                    title="Eliminar template"
-                    onClick={() => {
-                      if (window.confirm(`¿Eliminar "${master.nombre}"? Esta acción no se puede deshacer.`))
-                        eliminarMut.mutate(master.id)
-                    }}
-                    className="w-8 h-8 rounded-xl flex items-center justify-center text-sm bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-all"
-                  >
-                    🗑
-                  </button>
-                </div>
-              </div>
-
-              {/* Puntos de medición */}
-              {(master.puntosReferencia?.length ?? 0) > 0 && (
-                <div className="px-6 py-3 flex flex-wrap gap-1.5 border-b border-gray-50">
-                  {master.puntosReferencia?.map((p, i) => (
-                    <span key={i} className="bg-gray-100 text-[9px] font-black uppercase text-gray-500 px-2 py-0.5 rounded-lg">
-                      {p.nombre}
+          {/* Tarjetas Master en una cuadrícula para optimizar el espacio */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            {masterCategories.map(master => (
+              <div
+                key={master.id}
+                className={`bg-zinc-900/40 border backdrop-blur-xl rounded-[2rem] transition-all duration-300 flex flex-col justify-between overflow-hidden group hover:shadow-xl hover:shadow-indigo-500/5 ${
+                  editId === master.id
+                    ? 'border-indigo-500 shadow-lg shadow-indigo-500/10'
+                    : 'border-zinc-800/80 shadow-sm hover:border-zinc-700/85'
+                }`}
+              >
+                {/* Header del master */}
+                <div className="flex items-start justify-between px-6 py-5 border-b border-zinc-800/60 bg-zinc-950/20">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="shrink-0 bg-indigo-600 text-white text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-tighter italic">
+                      Master
                     </span>
-                  ))}
-                </div>
-              )}
+                    <h2 className="text-sm font-black text-white uppercase tracking-tight italic truncate">
+                      {master.nombre}
+                    </h2>
+                  </div>
 
-              {/* Variantes de estilo */}
-              <div className="px-6 py-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {categorias.filter(c => c.parentId === master.id).map(variant => (
-                    <div
-                      key={variant.id}
-                      className="flex items-center justify-between bg-gray-50/60 rounded-xl px-4 py-3 border border-gray-100 group/v hover:border-indigo-100 hover:bg-white transition-all"
+                  {/* Acciones del master */}
+                  <div className="flex items-center gap-1 shrink-0 ml-4">
+                    <button
+                      title="Editar template"
+                      onClick={() => editId === master.id ? resetForm() : abrirEdicion(master)}
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs transition-all ${
+                        editId === master.id
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-zinc-950/60 border border-zinc-850 text-zinc-400 hover:bg-zinc-850 hover:text-white'
+                      }`}
                     >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full shrink-0" />
-                        <span className="text-xs font-black uppercase text-gray-700 tracking-tight italic truncate">
-                          {variant.nombre}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover/v:opacity-100 transition-opacity shrink-0 ml-2">
-                        <button
-                          onClick={() => editId === variant.id ? resetForm() : abrirEdicion(variant)}
-                          className="text-[9px] font-black text-indigo-500 hover:text-indigo-700 px-2 py-1 rounded-lg hover:bg-indigo-50 transition-all"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (window.confirm(`¿Eliminar la variante "${variant.nombre}"?`))
-                              eliminarMut.mutate(variant.id)
-                          }}
-                          className="text-[9px] font-black text-red-400 hover:text-red-600 px-2 py-1 rounded-lg hover:bg-red-50 transition-all"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                      ✎
+                    </button>
+                    <button
+                      title="Inactivar template"
+                      onClick={() => {
+                        if (window.confirm(`¿Inactivar "${master.nombre}"? Dejará de aparecer en el sistema pero no se eliminará.`))
+                          inactivarMut.mutate(master.id)
+                      }}
+                      className="w-8 h-8 rounded-xl flex items-center justify-center text-xs bg-zinc-950/60 border border-zinc-850 text-zinc-400 hover:bg-amber-950/40 hover:text-amber-400 transition-all"
+                    >
+                      ⊘
+                    </button>
+                    <button
+                      title="Eliminar template"
+                      onClick={() => {
+                        if (window.confirm(`¿Eliminar "${master.nombre}"? Esta acción no se puede deshacer.`))
+                          eliminarMut.mutate(master.id)
+                      }}
+                      className="w-8 h-8 rounded-xl flex items-center justify-center text-xs bg-zinc-950/60 border border-zinc-850 text-zinc-400 hover:bg-rose-950/40 hover:text-rose-400 transition-all"
+                    >
+                      🗑
+                    </button>
+                  </div>
+                </div>
 
-                  <button
-                    onClick={() => { resetForm(); setParentId(master.id) }}
-                    className="flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl border-2 border-dashed border-gray-100 text-[10px] font-black uppercase text-gray-300 hover:border-indigo-200 hover:text-indigo-400 transition-all"
-                  >
-                    + Agregar variante
-                  </button>
+                {/* Puntos de medición */}
+                {(master.puntosReferencia?.length ?? 0) > 0 && (
+                  <div className="px-6 py-3 flex flex-wrap gap-1.5 border-b border-zinc-800/60 bg-zinc-950/10">
+                    {master.puntosReferencia?.map((p, i) => (
+                      <span key={i} className="bg-zinc-950/60 text-[9px] font-black uppercase text-zinc-400 px-2 py-0.5 rounded-lg border border-zinc-800/40">
+                        {p.nombre}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Variantes de estilo */}
+                <div className="px-6 py-4 space-y-3">
+                  <div className="flex flex-col gap-2">
+                    {categorias.filter(c => c.parentId === master.id).map(variant => (
+                      <div
+                        key={variant.id}
+                        className="flex items-center justify-between bg-zinc-950/30 rounded-xl px-4 py-3 border border-zinc-800/60 group/v hover:border-indigo-900/50 hover:bg-zinc-950/60 transition-all"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full shrink-0 animate-pulse" />
+                          <span className="text-xs font-black uppercase text-zinc-300 tracking-tight italic truncate">
+                            {variant.nombre}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover/v:opacity-100 transition-opacity shrink-0 ml-2">
+                          <button
+                            onClick={() => editId === variant.id ? resetForm() : abrirEdicion(variant)}
+                            className="text-[9px] font-black text-indigo-400 hover:text-indigo-300 px-2 py-1 rounded-lg hover:bg-indigo-950/30 transition-all"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`¿Eliminar la variante "${variant.nombre}"?`))
+                                eliminarMut.mutate(variant.id)
+                            }}
+                            className="text-[9px] font-black text-rose-400 hover:text-rose-300 px-2 py-1 rounded-lg hover:bg-rose-950/30 transition-all"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    <button
+                      onClick={() => { resetForm(); setParentId(master.id) }}
+                      className="flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl border-2 border-dashed border-zinc-800 text-[10px] font-black uppercase text-zinc-500 hover:border-indigo-500/40 hover:text-indigo-400 bg-zinc-950/20 transition-all"
+                    >
+                      + Agregar variante
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
 
           {masterCategories.length === 0 && (
-            <div className="bg-white rounded-3xl p-24 border-2 border-dashed border-gray-100 text-center">
+            <div className="bg-zinc-900/50 rounded-3xl p-24 border-2 border-dashed border-zinc-800 text-center">
               <div className="text-4xl mb-5 grayscale opacity-20">📐</div>
-              <p className="text-sm font-black uppercase text-gray-300 tracking-widest">
+              <p className="text-sm font-black uppercase text-zinc-500 tracking-widest">
                 No hay templates definidos en el PDM
               </p>
             </div>
