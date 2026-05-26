@@ -118,6 +118,11 @@ router.post('/', async (req: AuthRequest, res: Response) => {
 
     const data = crearPresupuestoSchema.parse(req.body)
 
+    const membresia = await prisma.membresia.findUnique({
+      where: { usuarioId_empresaId: { usuarioId: req.usuarioId!, empresaId } }
+    })
+    const membresiaId = membresia?.id
+
     const subtotal = data.lineas.reduce(
       (acc: number, l: any) =>
         acc + (l.precioUnitario + l.precioBordado + l.precioEstampado) * l.cantidad,
@@ -154,8 +159,8 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       data: {
         empresaId,
         numero,
-        ...(data.clienteId ? { cliente: { connect: { id: data.clienteId } } } : {}),
-        ...(data.institucionId ? { institucion: { connect: { id: data.institucionId } } } : {}),
+        clienteId:       data.clienteId || null,
+        institucionId:   data.institucionId || null,
         clienteNombre:   data.clienteNombre,
         clienteContacto: data.clienteContacto,
         clienteTelefono: data.clienteTelefono,
@@ -179,7 +184,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
         notas:           data.notas,
         versionDe:       data.versionDe,
         costoTotalSnapshot: 0, // Se calculará abajo
-        usuarioId:       req.usuarioId,
+        membresiaId:     membresiaId,
         lineas: {
           create: data.lineas.map((l: any) => ({
             tipoItem:        l.tipoItem,
@@ -202,7 +207,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     })
 
     // Actualizar el costo total del presupuesto
-    const costoTotal = presupuesto.lineas.reduce((acc, l) => acc + (l.costoUnitarioSnapshot * l.cantidad), 0)
+    const costoTotal = (presupuesto as any).lineas.reduce((acc: number, l: any) => acc + (l.costoUnitarioSnapshot * l.cantidad), 0)
     await prisma.presupuesto.update({
       where: { id: presupuesto.id },
       data: { costoTotalSnapshot: costoTotal }
@@ -223,6 +228,11 @@ router.post('/:id/cobrar', async (req: AuthRequest, res: Response) => {
     const empresaId = req.empresaId
     const { id } = req.params
     const { cuentaId, recargoPct, descuento, cuotas, requiereFactura } = req.body
+
+    const membresia = await prisma.membresia.findUnique({
+      where: { usuarioId_empresaId: { usuarioId: req.usuarioId!, empresaId: empresaId! } }
+    })
+    const membresiaId = membresia?.id
 
     const presupuesto = await prisma.presupuesto.findFirst({
       where: { id, empresaId },
@@ -292,7 +302,7 @@ router.post('/:id/cobrar', async (req: AuthRequest, res: Response) => {
           descuento: descuento ?? presupuesto.descuento,
           cuotas: cuotas ?? presupuesto.cuotas,
           requiereFactura: requiereFactura ?? presupuesto.requiereFactura,
-          usuarioFinalizaId: req.usuarioId
+          membresiaFinalizaId: membresiaId
         }
       })
     })

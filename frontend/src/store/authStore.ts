@@ -19,6 +19,7 @@ interface Usuario {
   modulos: string[] // Módulos de la empresa activa
   preferencias?: Record<string, any>
   membresias?: MembresiaConfig[]
+  tarifaVenta?: string
 }
 
 interface AuthState {

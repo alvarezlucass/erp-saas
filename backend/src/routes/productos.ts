@@ -42,6 +42,7 @@ const productoSchema = z.object({
     metrosTela: z.number().optional().nullable(),
     referenciaMolderia: z.string().optional().nullable(),
     codigoBarra: z.string().optional().nullable(),
+    precioVenta: z.number().optional().nullable(),
   })).optional(),
 
   // Ficha Técnica de Medidas (CM)

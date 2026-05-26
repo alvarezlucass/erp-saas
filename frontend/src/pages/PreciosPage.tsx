@@ -58,7 +58,7 @@ export function PreciosPage() {
       p.codigoBarra?.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
-    const groups: Record<string, any[]> = {}
+    const groups: Record<string, { label: string; items: any[] }> = {}
 
     filtered.forEach(p => {
       let key = 'GENERAL'

@@ -149,6 +149,8 @@ export interface Producto {
   activo:       boolean
   creadoEn:     string
   tipo:         'FABRICADO' | 'COMPRADO' | 'SEMI_TERMINADO'
+  tipoVenta?:   'UNIDAD' | 'FRACCIONADO'
+  temporada?:   string | null
   categoriaId:  string | null
   categoria?:   Categoria | null
   proveedorId:  string | null
@@ -170,6 +172,7 @@ export interface Producto {
   subCategoriaId?: string | null
   subCategoria?: SubCategoria | null
   preferencias?: Record<string, any>
+  metadata?:    any
 }
 
 // ─── COMPRAS ───────────────────────────────────────────────────────────────
@@ -185,6 +188,7 @@ export interface OrdenCompra {
   totalEstimado:       number
   notas:               string | null
   items?:              LineaOrdenCompra[]
+  creadoEn:            string
 }
 
 export interface LineaOrdenCompra {
@@ -334,6 +338,10 @@ export interface Bordado {
   precioPorMillar:  number
   costoPonchado:    number
   marginTerceros:   number
+  precioFinal?:      number | null
+  precioRevendedor?: number | null
+  precioEmpresa?:    number | null
+  precioRevendido?:  number | null
   fotoUrl:          string | null
   archivoMatrizUrl: string | null
   activo:           boolean
@@ -404,10 +412,13 @@ export const finanzasApi = {
 }
 
 export const produccionApi = {
+  listar:        () => api.get('/produccion').then(r => r.data),
   listarPedidos: () => api.get('/produccion').then(r => r.data),
   aprobarPresupuesto: (id: string) => api.post(`/produccion/aprobar/${id}`),
   obtenerEtapas: (pedidoId: string) => api.get(`/produccion/pedidos/${pedidoId}/etapas`).then(r => r.data),
   actualizarEtapa: (id: string, data: any) => api.patch(`/produccion/etapas/${id}`, data),
+  actualizarEstado: (id: string, estado: string) => api.patch(`/produccion/pedidos/${id}/estado`, { estado }).then(r => r.data),
+  actualizarOrden: (id: string, completada: boolean) => api.patch(`/produccion/ordenes/${id}`, { completada }).then(r => r.data),
 }
 
 export interface MovimientoStock {

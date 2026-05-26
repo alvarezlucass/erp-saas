@@ -288,9 +288,9 @@ export default function RecepcionMercaderiaPage() {
                             {Number(item.cantidadRecibida) === Number(item.cantidadPendiente) ? (
                               <CheckCircle2 className="w-5 h-5 text-green-500" />
                             ) : Number(item.cantidadRecibida) > Number(item.cantidadPendiente) ? (
-                              <AlertCircle className="w-5 h-5 text-red-500" title="Excedente detectado" />
+                              <span title="Excedente detectado"><AlertCircle className="w-5 h-5 text-red-500" /></span>
                             ) : (
-                              <Clock className="w-5 h-5 text-orange-500" title="Pendiente parcial" />
+                              <span title="Pendiente parcial"><Clock className="w-5 h-5 text-orange-500" /></span>
                             )}
                           </div>
                         )}

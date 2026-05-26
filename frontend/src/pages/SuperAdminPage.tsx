@@ -214,7 +214,7 @@ export function SuperAdminPage() {
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['super', 'empresas'] })
       setShowAlta(false)
-      setNuevo({ empresa: { nombre: '', cuit: '', plan: 'BASIC', modulos: ['COMERCIAL'] }, admin: { nombre: '', email: '', password: '' } })
+      setNuevo({ empresa: { nombre: '', cuit: '', plan: 'BASIC', modulos: ['COMERCIAL'], pais: 'AR', moneda: 'ARS' }, admin: { nombre: '', email: '', password: '' } })
       toast.success(`✅ Empresa "${data?.empresa?.nombre}" creada correctamente`)
     },
     onError: (err: any) => toast.error(err?.response?.data?.error || err.message || 'Error al dar de alta')

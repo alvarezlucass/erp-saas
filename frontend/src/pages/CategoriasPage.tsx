@@ -130,17 +130,17 @@ function GrillaMedidas({
   }, [])
 
   return (
-    <div className="mt-10 bg-white rounded-3xl border border-gray-100 shadow-lg overflow-hidden">
+    <div className="mt-10 bg-zinc-900/50 rounded-[2rem] border border-zinc-800/80 backdrop-blur-xl shadow-2xl overflow-hidden">
       {/* Header de la grilla */}
-      <div className="flex items-center justify-between px-8 py-5 border-b border-gray-50 bg-gray-50/50">
+      <div className="flex items-center justify-between px-8 py-5 border-b border-zinc-800/60 bg-zinc-950/20">
         <div className="flex items-center gap-3">
           <span className="w-2 h-2 bg-indigo-500 rounded-full" />
           <div>
-            <p className="text-xs font-black uppercase text-gray-900 tracking-tight">
-              Especificaciones de Medidas — <span className="text-indigo-600">{cat?.nombre}</span>
+            <p className="text-xs font-black uppercase text-white tracking-tight">
+              Especificaciones de Medidas — <span className="text-indigo-400">{cat?.nombre}</span>
             </p>
-            <p className="text-[9px] text-gray-400 font-medium mt-0.5">
-              {puntosRef.length} puntos de medición · navigate con Tab / Flechas
+            <p className="text-[9px] text-zinc-400 font-medium mt-0.5">
+              {puntosRef.length} puntos de medición · Navegá con Tab / Flechas
             </p>
           </div>
         </div>
@@ -148,37 +148,36 @@ function GrillaMedidas({
         {/* Selector de curva + crear inline */}
         <div className="flex items-start gap-2">
           <div className="flex-1 min-w-[220px]">
-            <label className="block text-[8px] font-black uppercase text-gray-400 mb-1.5 tracking-widest">
+            <label className="block text-[8px] font-black uppercase text-zinc-500 mb-1.5 tracking-widest">
               Curva de referencia
             </label>
             <div className="flex items-center gap-2">
               <select
                 value={selectedCurvaId}
                 onChange={e => setSelectedCurvaId(e.target.value)}
-                className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold uppercase outline-none focus:ring-2 focus:ring-indigo-200"
+                className="bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-xs font-bold uppercase text-white outline-none focus:ring-2 focus:ring-indigo-500/50"
               >
                 <option value="">Seleccionar curva...</option>
-                {curvas.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                {curvas.map(c => <option key={c.id} value={c.id} className="bg-zinc-900">{c.nombre}</option>)}
               </select>
               <NuevaCurvaInline onCreated={id => setSelectedCurvaId(id)} />
             </div>
-            {/* mini form para nueva curva se renderiza debajo */}
           </div>
         </div>
       </div>
 
       {puntosRef.length === 0 && (
         <div className="px-8 py-12 text-center">
-          <p className="text-sm font-black uppercase text-gray-200 tracking-widest">
+          <p className="text-sm font-black uppercase text-zinc-600 tracking-widest">
             Este template no tiene puntos de medición definidos
           </p>
-          <p className="text-xs text-gray-300 mt-2">Editá el template y agregá los puntos de medición primero</p>
+          <p className="text-xs text-zinc-500 mt-2">Editá el template y agregá los puntos de medición primero</p>
         </div>
       )}
 
       {puntosRef.length > 0 && !curvaSeleccionada && (
         <div className="px-8 py-12 text-center">
-          <p className="text-sm font-black uppercase text-gray-200 tracking-widest">
+          <p className="text-sm font-black uppercase text-zinc-600 tracking-widest">
             Seleccioná una curva para cargar las medidas
           </p>
         </div>
@@ -190,7 +189,7 @@ function GrillaMedidas({
             <table className="w-full border-separate border-spacing-0">
               <thead>
                 <tr>
-                  <th className="sticky left-0 z-10 bg-gray-50 px-6 py-4 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest border-b border-r border-gray-100 min-w-[160px]">
+                  <th className="sticky left-0 z-10 bg-zinc-950 px-6 py-4 text-left text-[10px] font-black uppercase text-zinc-400 tracking-widest border-b border-r border-zinc-800 min-w-[160px]">
                     Punto de Medición
                   </th>
                   {curvaSeleccionada.items.map((t: any) => (
@@ -207,16 +206,16 @@ function GrillaMedidas({
                 {puntosRef.map((punto: any, pi: number) => (
                   <tr
                     key={punto.id}
-                    className={pi % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}
+                    className={pi % 2 === 0 ? 'bg-zinc-900/10' : 'bg-zinc-950/20'}
                   >
-                    <td className="sticky left-0 z-10 px-6 py-3 text-[11px] font-black text-gray-700 border-r border-gray-100 bg-inherit whitespace-nowrap">
+                    <td className="sticky left-0 z-10 px-6 py-3 text-[11px] font-black text-zinc-300 border-r border-zinc-800 bg-zinc-900 whitespace-nowrap">
                       {punto.nombre}
                     </td>
                     {curvaSeleccionada.items.map((t: any, ti: number) => {
                       const cellKey = `${pi}-${ti}`
                       const val = matrizBase[t.nombre]?.[punto.id] || ''
                       return (
-                        <td key={t.id} className="px-2 py-1.5">
+                        <td key={t.id} className="px-2 py-1.5 border-b border-zinc-800/40">
                           <input
                             ref={el => { inputRefs.current[cellKey] = el }}
                             type="number"
@@ -239,8 +238,8 @@ function GrillaMedidas({
                               w-full text-center text-[11px] font-bold rounded-lg py-2 px-1 outline-none border
                               transition-all
                               ${val
-                                ? 'bg-indigo-50 border-indigo-200 text-indigo-800 focus:ring-2 focus:ring-indigo-300'
-                                : 'bg-white border-gray-100 text-gray-400 focus:bg-white focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100'
+                                ? 'bg-indigo-950/30 border-indigo-800/50 text-indigo-300 focus:ring-2 focus:ring-indigo-500/50'
+                                : 'bg-zinc-950 border-zinc-850 text-zinc-500 focus:bg-zinc-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30'
                               }
                             `}
                           />
@@ -253,21 +252,20 @@ function GrillaMedidas({
             </table>
           </div>
 
-          <div className="px-8 py-5 flex items-center justify-between border-t border-gray-50 bg-gray-50/30">
-            <p className="text-[9px] text-gray-400 font-medium italic">
+          <div className="px-8 py-5 flex items-center justify-between border-t border-zinc-800/60 bg-zinc-950/20">
+            <p className="text-[9px] text-zinc-400 font-medium italic">
               Los valores ingresados se guardan como referencia maestra del template
             </p>
             <button
               onClick={onSave}
               disabled={isSaving}
-              className="bg-indigo-600 text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 transition-all shadow-md disabled:opacity-40 active:scale-95"
+              className="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-40 active:scale-95"
             >
               {isSaving ? 'Guardando...' : '✓ Guardar Especificaciones'}
             </button>
           </div>
         </>
       )}
-    </div>
   )
 }
 

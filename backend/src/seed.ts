@@ -189,24 +189,34 @@ async function main() {
   const hashSuper = await bcrypt.hash('@Marte2026', 10)
   
   // Cliente Admin (Amanecer Indumentaria)
-  await prisma.usuario.upsert({
+  const userAdmin = await prisma.usuario.upsert({
     where:  { email: 'admin@amanecer.com' },
-    update: { empresaId, rol: 'CLIENT_ADMIN', passwordHash: hashAdmin },
-    create: { nombre: 'Admin Amanecer', email: 'admin@amanecer.com', passwordHash: hashAdmin, rol: 'CLIENT_ADMIN', empresaId },
+    update: { passwordHash: hashAdmin },
+    create: { nombre: 'Admin Amanecer', email: 'admin@amanecer.com', passwordHash: hashAdmin, debeCambiarPassword: false },
+  })
+
+  await prisma.membresia.upsert({
+    where: { usuarioId_empresaId: { usuarioId: userAdmin.id, empresaId } },
+    update: { rol: 'CLIENT_ADMIN', permisos: ['ADMIN'] },
+    create: { usuarioId: userAdmin.id, empresaId, rol: 'CLIENT_ADMIN', permisos: ['ADMIN'] }
   })
   
   // Super Admin (Productor / Proveedor del Sistema)
-  // Nota: En un entorno real, el Super Admin podría estar en una empresa "Sistema"
-  await prisma.usuario.upsert({
+  const userSuper = await prisma.usuario.upsert({
     where: { email: 'admin@t4-e.com' },
     update: { passwordHash: hashSuper },
     create: { 
       nombre: 'Super Admin Unifai', 
       email: 'admin@t4-e.com', 
-      passwordHash: hashSuper, 
-      rol: 'SUPER_ADMIN',
-      empresaId
+      passwordHash: hashSuper,
+      debeCambiarPassword: false
     }
+  })
+
+  await prisma.membresia.upsert({
+    where: { usuarioId_empresaId: { usuarioId: userSuper.id, empresaId } },
+    update: { rol: 'SUPER_ADMIN', permisos: ['ADMIN'] },
+    create: { usuarioId: userSuper.id, empresaId, rol: 'SUPER_ADMIN', permisos: ['ADMIN'] }
   })
 
   console.log('\n✅ Seed completado.')

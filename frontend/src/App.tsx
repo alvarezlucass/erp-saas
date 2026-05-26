@@ -140,6 +140,7 @@ export default function App() {
             {/* PRODUCCION */}
             <Route path="pedidos" element={<Guard permission="PRODUCCION"><PedidosPage /></Guard>} />
             <Route path="bordados" element={<Guard permission="PRODUCCION"><BordadosPage /></Guard>} />
+            <Route path="bordados/disenos" element={<ComingSoonPage />} />
 
             {/* COMPRAS */}
             <Route path="proveedores" element={<Guard permission="STOCK"><ProveedoresPage /></Guard>} />
@@ -147,20 +148,29 @@ export default function App() {
             <Route path="compras/recepcion" element={<Guard permission="STOCK"><RecepcionMercaderiaPage /></Guard>} />
             <Route path="compras/devoluciones" element={<ComingSoonPage />} />
 
-            {/* PRODUCCION AVANZADA */}
+            {/* PRODUCCION AVANZADA / TALLER */}
             <Route path="produccion/ordenes" element={<ComingSoonPage />} />
             <Route path="produccion/etapas" element={<ComingSoonPage />} />
             <Route path="produccion/entrega" element={<ComingSoonPage />} />
             <Route path="terceros/ordenes" element={<ComingSoonPage />} />
 
-            {/* FINANZAS */}
+            {/* FINANZAS / ADMINISTRACION */}
             <Route path="finanzas/cc" element={<ComingSoonPage />} />
             <Route path="finanzas/bancos" element={<ComingSoonPage />} />
+            <Route path="finanzas/movimientos" element={<ComingSoonPage />} />
             <Route path="finanzas/pagos" element={<ComingSoonPage />} />
             <Route path="finanzas/cashflow" element={<ComingSoonPage />} />
             <Route path="finanzas/proyecciones" element={<ComingSoonPage />} />
             <Route path="finanzas/sueldos" element={<ComingSoonPage />} />
             <Route path="finanzas/contabilidad" element={<ComingSoonPage />} />
+
+            {/* RRHH */}
+            <Route path="rrhh/fichadas" element={<ComingSoonPage />} />
+            <Route path="rrhh/legajos" element={<ComingSoonPage />} />
+            <Route path="rrhh/licencias" element={<ComingSoonPage />} />
+            <Route path="rrhh/sueldos" element={<ComingSoonPage />} />
+            <Route path="rrhh/liquidaciones" element={<ComingSoonPage />} />
+            <Route path="rrhh/931" element={<ComingSoonPage />} />
 
             {/* COMERCIAL */}
             <Route path="comercial/clientes" element={<Guard permission="VENTAS"><ClientesPage /></Guard>} />

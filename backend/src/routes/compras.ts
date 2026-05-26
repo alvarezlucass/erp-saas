@@ -166,7 +166,6 @@ router.post('/recepciones', async (req: AuthRequest, res: Response) => {
           // Auditoría de stock
           await tx.movimientoStock.create({
             data: {
-              empresaId: req.empresaId!, // Wait, MovimientoStock doesn't have empresaId? Checking schema...
               insumoId: item.insumoId,
               tipo: 'INGRESO',
               cantidad: item.cantidadRecibida,
