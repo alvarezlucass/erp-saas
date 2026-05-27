@@ -26,13 +26,16 @@ import {
   Layers,
   ArrowUpRight,
   Receipt,
-  Edit3
+  Edit3,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useAuthStore } from '../store/authStore'
+import { CONFIG_MODULOS } from '../constants/modules'
 
 // --- Componentes Auxiliares ---
 
@@ -85,6 +88,12 @@ export function ClientesPage() {
     tipoFactura: 'B'
   })
 
+  // Estados para la edición de módulos de suscripción
+  const [isEditingModules, setIsEditingModules] = useState(false)
+  const [selectedModules, setSelectedModules] = useState<string[]>([])
+  const [expandedGroups, setExpandedGroups] = useState<string[]>([])
+  const [editVencimiento, setEditVencimiento] = useState('')
+
   const { data: clientes = [], isLoading } = useQuery({
     queryKey: ['clientes'],
     queryFn: () => clientesApi.listar()
@@ -126,6 +135,7 @@ export function ClientesPage() {
       queryClient.invalidateQueries({ queryKey: ['clientes'] })
       toast.success('Cliente actualizado correctamente')
       setIsCreateModalOpen(false)
+      setIsEditingModules(false)
       setSelectedCliente(updatedCliente)
     },
     onError: (err: any) => {
@@ -429,57 +439,225 @@ export function ClientesPage() {
                     initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
                     className="space-y-8"
                   >
-                    <div className="bg-indigo-600 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl shadow-indigo-100">
-                      <div className="relative z-10 space-y-6">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Estado del Servicio</p>
-                            <h3 className="text-2xl font-black">Plan Corporativo Premium</h3>
-                          </div>
-                          <Shield size={32} className="opacity-40" />
+                    {isEditingModules ? (
+                      <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-[10px] font-black text-gray-900 uppercase tracking-[0.2em]">Configurar Módulos y Plazos</h4>
+                          <button
+                            type="button"
+                            onClick={() => setIsEditingModules(false)}
+                            className="text-xs text-gray-400 hover:text-gray-600 font-bold"
+                          >
+                            Cancelar
+                          </button>
                         </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-md">
-                            <p className="text-[8px] font-black uppercase opacity-60">Próximo Vencimiento</p>
-                            <p className="text-sm font-black">
-                              {selectedCliente.vencimiento 
-                                ? format(new Date(selectedCliente.vencimiento), "dd 'de' MMMM", { locale: es }) 
-                                : 'A definir'}
-                            </p>
-                          </div>
-                          <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-md">
-                            <p className="text-[8px] font-black uppercase opacity-60">Último Pago</p>
-                            <p className="text-sm font-black underline decoration-dotted">
-                              {selectedCliente.ultimoCobro
-                                ? format(new Date(selectedCliente.ultimoCobro), "dd/MM/yyyy")
-                                : 'Ninguno registrado'}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/5 rounded-full blur-3xl pointer-events-none" />
-                    </div>
 
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-end px-2">
-                        <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Módulos Contratados</h4>
-                        <span className="text-[9px] font-black text-indigo-500">Edit Config</span>
-                      </div>
-                      <div className="grid grid-cols-1 gap-3">
-                         {['Ventas & POS', 'Inventario Industrial', 'Producción Avanzada'].map(mod => (
-                           <div key={mod} className="flex items-center justify-between p-5 bg-gray-50 border border-gray-100 rounded-2xl group hover:bg-white hover:border-indigo-100 transition-all cursor-default">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-emerald-500 shadow-sm">
-                                  <CheckCircle2 size={16} />
+                        {/* Vencimiento */}
+                        <div className="bg-gray-50/50 p-6 rounded-[2rem] border border-gray-100/50 space-y-2">
+                          <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Próximo Vencimiento</label>
+                          <input 
+                            type="date"
+                            value={editVencimiento}
+                            onChange={e => setEditVencimiento(e.target.value)}
+                            className="w-full bg-white border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold shadow-inner outline-none focus:ring-2 focus:ring-indigo-500"
+                          />
+                        </div>
+
+                        {/* Árbol de Módulos */}
+                        <div className="space-y-4">
+                          <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Ecosistema de Módulos Activados</label>
+                          <div className="space-y-3">
+                            {CONFIG_MODULOS.map(group => {
+                              const subIds = group.submodules.map(s => s.id)
+                              const allSelected = subIds.every(id => selectedModules.includes(id))
+                              const noneSelected = subIds.every(id => !selectedModules.includes(id))
+                              const isIndeterminate = !allSelected && !noneSelected
+                              const isExpanded = expandedGroups.includes(group.id)
+
+                              const toggleGroup = () => {
+                                if (allSelected) {
+                                  setSelectedModules(prev => prev.filter(id => !subIds.includes(id)))
+                                } else {
+                                  setSelectedModules(prev => [...new Set([...prev, ...subIds])])
+                                }
+                              }
+
+                              const toggleExpand = () => {
+                                setExpandedGroups(prev =>
+                                  prev.includes(group.id) ? prev.filter(id => id !== group.id) : [...prev, group.id]
+                                )
+                              }
+
+                              return (
+                                <div key={group.id} className="border border-gray-100 rounded-2xl bg-white overflow-hidden shadow-sm">
+                                  {/* Cabecera del grupo */}
+                                  <div className="flex items-center justify-between p-4 bg-gray-50/50">
+                                    <div className="flex items-center gap-3">
+                                      <input 
+                                        type="checkbox"
+                                        checked={allSelected}
+                                        ref={el => {
+                                          if (el) el.indeterminate = isIndeterminate
+                                        }}
+                                        onChange={toggleGroup}
+                                        className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                                      />
+                                      <span className="text-xs font-black text-gray-800 uppercase tracking-tight">{group.label}</span>
+                                      <span className="text-[9px] font-bold text-gray-400">
+                                        ({group.submodules.filter(s => selectedModules.includes(s.id)).length} de {group.submodules.length})
+                                      </span>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={toggleExpand}
+                                      className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600 transition-colors"
+                                    >
+                                      {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                    </button>
+                                  </div>
+
+                                  {/* Sub-módulos */}
+                                  {isExpanded && (
+                                    <div className="p-4 border-t border-gray-100 bg-white space-y-3.5 pl-9">
+                                      {group.submodules.map(sub => {
+                                        const isChecked = selectedModules.includes(sub.id)
+                                        const toggleSub = () => {
+                                          setSelectedModules(prev =>
+                                            prev.includes(sub.id) ? prev.filter(id => id !== sub.id) : [...prev, sub.id]
+                                          )
+                                        }
+                                        return (
+                                          <label key={sub.id} className="flex items-center gap-3 cursor-pointer group text-left">
+                                            <input 
+                                              type="checkbox"
+                                              checked={isChecked}
+                                              onChange={toggleSub}
+                                              className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                                            />
+                                            <span className="text-xs font-bold text-gray-600 group-hover:text-gray-900 transition-colors">{sub.label}</span>
+                                          </label>
+                                        )
+                                      })}
+                                    </div>
+                                  )}
                                 </div>
-                                <span className="text-xs font-black text-gray-700">{mod}</span>
-                              </div>
-                              <ArrowUpRight size={14} className="text-gray-200 group-hover:text-indigo-400 transition-colors" />
-                           </div>
-                         ))}
+                              )
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Botón de Guardado */}
+                        <button
+                          type="button"
+                          disabled={updateMutation.isPending}
+                          onClick={() => {
+                            updateMutation.mutate({
+                              id: selectedCliente.id,
+                              data: {
+                                configSuscripcion: { modulos: selectedModules },
+                                vencimiento: editVencimiento ? new Date(editVencimiento).toISOString() : null
+                              }
+                            })
+                          }}
+                          className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-indigo-100 transition-all disabled:opacity-50"
+                        >
+                          {updateMutation.isPending ? 'GUARDANDO...' : '✓ GUARDAR CONFIGURACIÓN'}
+                        </button>
                       </div>
-                    </div>
+                    ) : (
+                      <>
+                        <div className="bg-indigo-600 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl shadow-indigo-100">
+                          <div className="relative z-10 space-y-6">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Estado del Servicio</p>
+                                <h3 className="text-2xl font-black">Plan Corporativo</h3>
+                              </div>
+                              <Shield size={32} className="opacity-40" />
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-md">
+                                <p className="text-[8px] font-black uppercase opacity-60">Próximo Vencimiento</p>
+                                <p className="text-sm font-black">
+                                  {selectedCliente.vencimiento 
+                                    ? format(new Date(selectedCliente.vencimiento), "dd 'de' MMMM", { locale: es }) 
+                                    : 'A definir'}
+                                </p>
+                              </div>
+                              <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-md">
+                                <p className="text-[8px] font-black uppercase opacity-60">Último Pago</p>
+                                <p className="text-sm font-black underline decoration-dotted">
+                                  {selectedCliente.ultimoCobro
+                                    ? format(new Date(selectedCliente.ultimoCobro), "dd/MM/yyyy")
+                                    : 'Ninguno registrado'}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/5 rounded-full blur-3xl pointer-events-none" />
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-end px-2">
+                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Módulos Contratados</h4>
+                            {!isReadOnly && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const activeMods = selectedCliente.configSuscripcion?.modulos || []
+                                  setSelectedModules(activeMods)
+                                  setEditVencimiento(selectedCliente.vencimiento ? selectedCliente.vencimiento.substring(0, 10) : '')
+                                  setIsEditingModules(true)
+                                }}
+                                className="text-[9px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-wider bg-transparent border-none cursor-pointer"
+                              >
+                                ✎ Editar Config
+                              </button>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-1 gap-3">
+                            {CONFIG_MODULOS.map(group => {
+                              const activeSubmodules = group.submodules.filter(s =>
+                                (selectedCliente.configSuscripcion?.modulos || []).includes(s.id)
+                              )
+
+                              if (activeSubmodules.length === 0) return null
+
+                              return (
+                                <div key={group.id} className="flex flex-col p-5 bg-gray-50 border border-gray-100 rounded-2xl group hover:bg-white hover:border-indigo-100 transition-all text-left">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-emerald-500 shadow-sm border border-gray-100">
+                                        <CheckCircle2 size={16} />
+                                      </div>
+                                      <span className="text-xs font-black text-gray-800 uppercase tracking-tight">{group.label}</span>
+                                    </div>
+                                    <span className="text-[9px] font-bold text-gray-400 uppercase">
+                                      {activeSubmodules.length} activos
+                                    </span>
+                                  </div>
+                                  <div className="mt-3 flex flex-wrap gap-1.5 pl-11">
+                                    {activeSubmodules.map(sub => (
+                                      <span key={sub.id} className="bg-white px-2.5 py-1 text-[9px] font-bold text-gray-600 rounded-md border border-gray-200">
+                                        {sub.label}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                            
+                            {(!selectedCliente.configSuscripcion?.modulos || selectedCliente.configSuscripcion.modulos.length === 0) && (
+                              <div className="text-center py-8 bg-gray-50 rounded-[2rem] border border-gray-100 border-dashed">
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Sin módulos activados</p>
+                                <p className="text-[9px] text-gray-400 mt-1">Hacé clic en Editar Config para habilitar accesos</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </motion.div>
                 )}
 

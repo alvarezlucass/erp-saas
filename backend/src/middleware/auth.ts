@@ -46,10 +46,45 @@ export function requirePermission(permission: string) {
       return next()
     }
 
-    if (!req.permisos?.includes(permission)) {
-      return res.status(403).json({ error: `Permiso insuficiente: ${permission}` })
+    const userPerms = req.permisos || []
+    
+    // ADMIN has all permissions
+    if (userPerms.includes('ADMIN')) {
+      return next()
     }
 
-    next()
+    if (userPerms.includes(permission)) {
+      return next()
+    }
+
+    // Mapeo legacy
+    const LEGACY_MAP: Record<string, string[]> = {
+      VENTAS: ['VENTAS_PRECIOS', 'VENTAS_PRESUPUESTOS', 'VENTAS_POS_VENDEDOR'],
+      CAJA: ['VENTAS_POS_CAJA'],
+      VENTAS_CLIENTES: ['VENTAS_REVENDEDORES', 'COMERCIAL_CLIENTES', 'COMERCIAL_HISTORIAL'],
+      STOCK_EDIT: ['COMPRAS_INSUMOS', 'TALLER_MOLDERIA', 'TALLER_COSTEOS'],
+      STOCK_INVENTORY: ['COMPRAS_OC', 'COMPRAS_RECEPCION', 'COMPRAS_DEVOLUCIONES', 'COMPRAS_PROVEEDORES'],
+      STOCK_VIEW: ['TALLER_STOCK'],
+      PRODUCCION_TALLER: ['TALLER_ORDENES', 'TALLER_ETAPAS', 'TALLER_ENTREGA'],
+      PRODUCCION_SPECIAL: ['BORDADOS_ORDENES', 'BORDADOS_TERCEROS', 'BORDADOS_DISENOS'],
+      FINANZAS_BASIC: ['ADMINISTRACION_MOVIMIENTOS', 'ADMINISTRACION_PAGOS'],
+      FINANZAS_ADV: [
+        'ADMINISTRACION_CASHFLOW', 'ADMINISTRACION_PROYECCIONES',
+        'RRHH_FICHADAS', 'RRHH_LEGAJOS', 'RRHH_LICENCIAS', 'RRHH_SUELDOS', 'RRHH_LIQUIDACIONES', 'RRHH_931'
+      ],
+      REPORTES_VIEW: ['REPORTES_VENTAS', 'REPORTES_RENTABILIDAD', 'REPORTES_EJECUTIVO'],
+      ADMIN: ['SISTEMAS_ROLES', 'SISTEMAS_GLOBAL', 'SISTEMAS_IMPORTACION', 'SISTEMAS_AVANZADO']
+    }
+
+    // Check if user has any legacy permission that maps to the requested permission
+    const hasLegacy = Object.entries(LEGACY_MAP).some(([legacyPerm, mappedSubmodules]) => 
+      userPerms.includes(legacyPerm) && mappedSubmodules.includes(permission)
+    )
+
+    if (hasLegacy) {
+      return next()
+    }
+
+    return res.status(403).json({ error: `Permiso insuficiente: ${permission}` })
   }
 }

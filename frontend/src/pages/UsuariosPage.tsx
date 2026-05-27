@@ -15,9 +15,12 @@ import {
   AlertCircle,
   TrendingUp,
   Zap,
-  KeyRound
+  KeyRound,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
+import { CONFIG_MODULOS } from '../constants/modules'
 
 const LIMITES_PLANES: Record<string, number> = {
   FREE: 2,
@@ -27,178 +30,72 @@ const LIMITES_PLANES: Record<string, number> = {
 }
 
 // ─── Permisos agrupados por área (Alineados con el Menú Lateral) ────────────────
-const GRUPOS_PERMISOS = [
-  {
-    grupo: 'Principal',
-    color: 'emerald',
-    bgColor: 'bg-emerald-50',
-    borderColor: 'border-emerald-200',
-    textColor: 'text-emerald-700',
-    dotColor: 'bg-emerald-400',
-    checkColor: 'bg-emerald-500',
-    permisos: [
-      {
-        id: 'VENTAS',
-        label: 'Ventas y Mostrador',
-        desc: 'Acceso a presupuestos, listas de precios y módulo de venta rápida.',
-        incluye: ['Listas de Precios', 'Presupuestos', 'Ventas (mostrador)']
-      },
-      {
-        id: 'CAJA',
-        label: 'Caja y Cobros',
-        desc: 'Procesar cobros y movimientos de caja en mostrador.',
-        incluye: ['Caja y cobros']
-      },
-      {
-        id: 'PRODUCCION',
-        label: 'Pedidos y Órdenes',
-        desc: 'Seguimiento de pedidos de clientes en la pantalla principal.',
-        incluye: ['Pedidos y órdenes']
-      }
-    ]
-  },
-  {
-    grupo: 'Compras y Abastecimiento',
-    color: 'indigo',
-    bgColor: 'bg-indigo-50',
-    borderColor: 'border-indigo-200',
-    textColor: 'text-indigo-700',
-    dotColor: 'bg-indigo-400',
-    checkColor: 'bg-indigo-500',
-    permisos: [
-      {
-        id: 'STOCK_INVENTORY',
-        label: 'Gestión de Proveedores y OC',
-        desc: 'Crear órdenes de compra, registrar recepciones de mercadería y gestionar proveedores.',
-        incluye: ['Gestión de Proveedores', 'Órdenes de Compra', 'Recepción de Mercadería', 'Devoluciones']
-      }
-    ]
-  },
-  {
-    grupo: 'Producción y Taller',
-    color: 'teal',
-    bgColor: 'bg-teal-50',
-    borderColor: 'border-teal-200',
-    textColor: 'text-teal-700',
-    dotColor: 'bg-teal-400',
-    checkColor: 'bg-teal-500',
-    permisos: [
-      {
-        id: 'STOCK_EDIT',
-        label: 'Fichas de Insumos y Costos',
-        desc: 'Gestionar insumos, moldería y costos de taller.',
-        incluye: ['Insumos y Costos', 'Ajustes de Costeo', 'Templates de Moldería']
-      },
-      {
-        id: 'STOCK_VIEW',
-        label: 'Control de Stock y Catálogo',
-        desc: 'Visualizar stock actual, catálogo de productos y ajustar existencias.',
-        incluye: ['Catálogo de productos', 'Control de Stock']
-      },
-      {
-        id: 'PRODUCCION_TALLER',
-        label: 'Etapas de Producción',
-        desc: 'Actualizar avance de órdenes, kanban y control de entrega de productos.',
-        incluye: ['Órdenes de Producción', 'Control de Etapas / Taller', 'Entrega Producto Terminado']
-      }
-    ]
-  },
-  {
-    grupo: 'Especial',
-    color: 'violet',
-    bgColor: 'bg-violet-50',
-    borderColor: 'border-violet-200',
-    textColor: 'text-violet-700',
-    dotColor: 'bg-violet-400',
-    checkColor: 'bg-violet-500',
-    permisos: [
-      {
-        id: 'PRODUCCION_SPECIAL',
-        label: 'Alta de Bordados',
-        desc: 'Diseñar y dar de alta bordados, ponchados y moldería avanzada.',
-        incluye: ['Alta de Bordados', 'Órdenes a Terceros']
-      }
-    ]
-  },
-  {
-    grupo: 'Finanzas y Tesorería',
-    color: 'amber',
-    bgColor: 'bg-amber-50',
-    borderColor: 'border-amber-200',
-    textColor: 'text-amber-700',
-    dotColor: 'bg-amber-400',
-    checkColor: 'bg-amber-500',
-    permisos: [
-      {
-        id: 'FINANZAS_BASIC',
-        label: 'Cuentas Corrientes y Movimientos',
-        desc: 'Consultar cuentas corrientes de clientes y proveedores, registrar cobros y pagos.',
-        incluye: ['Cuentas Corrientes', 'Bancos y Movimientos', 'Pago a Proveedores']
-      },
-      {
-        id: 'FINANZAS_ADV',
-        label: 'Flujos y Contabilidad General',
-        desc: 'Acceder a balances, proyecciones financieras, cashflow y liquidaciones de sueldos.',
-        incluye: ['Flujo de Caja (Cashflow)', 'Proyecciones Financieras', 'Sueldos y Liquidación', 'Contabilidad General']
-      }
-    ]
-  },
-  {
-    grupo: 'Gestión Comercial',
-    color: 'blue',
-    bgColor: 'bg-blue-50',
-    borderColor: 'border-blue-200',
-    textColor: 'text-blue-700',
-    dotColor: 'bg-blue-400',
-    checkColor: 'bg-blue-500',
-    permisos: [
-      {
-        id: 'VENTAS_CLIENTES',
-        label: 'Gestión de Clientes y Revendedores',
-        desc: 'Alta de clientes, historial de compras y cuentas de revendedores.',
-        incluye: ['Gestión de Clientes', 'Historial por Cliente', 'Revendedores (Pasamanos)']
-      }
-    ]
-  },
-  {
-    grupo: 'Reportes e Inteligencia',
-    color: 'rose',
-    bgColor: 'bg-rose-50',
-    borderColor: 'border-rose-200',
-    textColor: 'text-rose-700',
-    dotColor: 'bg-rose-400',
-    checkColor: 'bg-rose-500',
-    permisos: [
-      {
-        id: 'REPORTES_VIEW',
-        label: 'Acceso a Reportes',
-        desc: 'Consultar balances de ventas y rentabilidad ejecutiva.',
-        incluye: ['Reportes de Ventas', 'Rentabilidad por Producto', 'Dashboard Ejecutivo']
-      }
-    ]
-  },
-  {
-    grupo: 'Sistema y Administración',
-    color: 'indigo',
-    bgColor: 'bg-indigo-50',
-    borderColor: 'border-indigo-200',
-    textColor: 'text-indigo-700',
-    dotColor: 'bg-indigo-400',
-    checkColor: 'bg-indigo-600',
-    permisos: [
-      {
-        id: 'ADMIN',
-        label: 'Administración Total',
-        desc: 'Gestión de equipo de colaboradores, cargas masivas de datos y ajustes generales.',
-        incluye: ['Gestión de Equipo', 'Administración Global', 'Carga Masiva de Datos', 'Roles y Permisos Avanzados']
-      }
-    ]
-  }
-]
+const COLOR_CLASSES: Record<string, { textColor: string, bgColor: string, borderColor: string }> = {
+  emerald: { textColor: 'text-emerald-700', bgColor: 'bg-emerald-50', borderColor: 'border-emerald-200' },
+  indigo: { textColor: 'text-indigo-700', bgColor: 'bg-indigo-50', borderColor: 'border-indigo-200' },
+  teal: { textColor: 'text-teal-700', bgColor: 'bg-teal-50', borderColor: 'border-teal-200' },
+  violet: { textColor: 'text-violet-700', bgColor: 'bg-violet-50', borderColor: 'border-violet-200' },
+  amber: { textColor: 'text-amber-700', bgColor: 'bg-amber-50', borderColor: 'border-amber-200' },
+  rose: { textColor: 'text-rose-700', bgColor: 'bg-rose-50', borderColor: 'border-rose-200' },
+  pink: { textColor: 'text-pink-700', bgColor: 'bg-pink-50', borderColor: 'border-pink-200' },
+  blue: { textColor: 'text-blue-700', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' },
+  gray: { textColor: 'text-gray-700', bgColor: 'bg-gray-50', borderColor: 'border-gray-200' },
+}
 
-const TODOS_LOS_PERMISOS = GRUPOS_PERMISOS.flatMap(g => g.permisos)
-const PERMISO_GRUPO_MAP: Record<string, typeof GRUPOS_PERMISOS[0]> = {}
-GRUPOS_PERMISOS.forEach(g => g.permisos.forEach(p => { PERMISO_GRUPO_MAP[p.id] = g }))
+const PERMISO_GRUPO_MAP: Record<string, { label: string, textColor: string, bgColor: string }> = {}
+
+// Mapear sub-módulos nuevos
+CONFIG_MODULOS.forEach(g => {
+  const colorKey = g.id === 'VENTAS' ? 'emerald' : 
+                   g.id === 'COMPRAS' ? 'indigo' :
+                   g.id === 'TALLER' ? 'teal' :
+                   g.id === 'BORDADOS' ? 'violet' :
+                   g.id === 'ADMINISTRACION' ? 'amber' :
+                   g.id === 'REPORTES' ? 'rose' :
+                   g.id === 'RRHH' ? 'pink' :
+                   g.id === 'SISTEMAS' ? 'indigo' :
+                   g.id === 'COMERCIAL' ? 'blue' : 'gray'
+  const classes = COLOR_CLASSES[colorKey] || COLOR_CLASSES.gray
+
+  g.submodules.forEach(s => {
+    PERMISO_GRUPO_MAP[s.id] = {
+      label: `${g.label}: ${s.label}`,
+      textColor: classes.textColor,
+      bgColor: classes.bgColor
+    }
+  })
+})
+
+// Mapear permisos legacy para retrocompatibilidad
+const LEGACY_MAP: Record<string, { label: string, color: string }> = {
+  VENTAS: { label: 'Ventas y Mostrador (Legacy)', color: 'emerald' },
+  CAJA: { label: 'Caja y Cobros (Legacy)', color: 'emerald' },
+  PRODUCCION: { label: 'Pedidos y Órdenes (Legacy)', color: 'emerald' },
+  STOCK_INVENTORY: { label: 'Proveedores y OC (Legacy)', color: 'indigo' },
+  STOCK_EDIT: { label: 'Insumos y Costos (Legacy)', color: 'teal' },
+  STOCK_VIEW: { label: 'Stock y Catálogo (Legacy)', color: 'teal' },
+  PRODUCCION_TALLER: { label: 'Etapas Producción (Legacy)', color: 'teal' },
+  PRODUCCION_SPECIAL: { label: 'Bordados (Legacy)', color: 'violet' },
+  FINANZAS_BASIC: { label: 'Cuentas Corrientes (Legacy)', color: 'amber' },
+  FINANZAS_ADV: { label: 'Finanzas Avanzadas (Legacy)', color: 'amber' },
+  VENTAS_CLIENTES: { label: 'Clientes y Revendedores (Legacy)', color: 'blue' },
+  REPORTES_VIEW: { label: 'Reportes (Legacy)', color: 'rose' },
+  ADMIN: { label: 'Administración Total (Legacy)', color: 'indigo' }
+}
+
+Object.entries(LEGACY_MAP).forEach(([id, info]) => {
+  const classes = COLOR_CLASSES[info.color] || COLOR_CLASSES.gray
+  PERMISO_GRUPO_MAP[id] = {
+    label: info.label,
+    textColor: classes.textColor,
+    bgColor: classes.bgColor
+  }
+})
+
+const TODOS_LOS_PERMISOS = CONFIG_MODULOS.flatMap(g => g.submodules.map(s => ({
+  id: s.id,
+  label: `${g.label} - ${s.label}`
+})))
 
 const ROL_LABELS: Record<string, string> = {
   CLIENT_ADMIN: 'Administrador',
@@ -207,11 +104,11 @@ const ROL_LABELS: Record<string, string> = {
 }
 
 function PermisoBadge({ permisoId }: { permisoId: string }) {
-  const grupo = PERMISO_GRUPO_MAP[permisoId]
-  if (!grupo) return <span className="text-[10px] font-black text-gray-400 bg-gray-100 px-2.5 py-1 rounded-md uppercase">{permisoId}</span>
+  const info = PERMISO_GRUPO_MAP[permisoId]
+  if (!info) return <span className="text-[10px] font-black text-gray-400 bg-gray-100 px-2.5 py-1 rounded-md uppercase">{permisoId}</span>
   return (
-    <span className={`text-[10px] font-black ${grupo.textColor} ${grupo.bgColor} px-3 py-1.5 rounded-xl uppercase tracking-tighter`}>
-      {TODOS_LOS_PERMISOS.find(p => p.id === permisoId)?.label || permisoId}
+    <span className={`text-[10px] font-black ${info.textColor} ${info.bgColor} px-3 py-1.5 rounded-xl uppercase tracking-tighter`}>
+      {info.label}
     </span>
   )
 }
@@ -314,7 +211,8 @@ export default function UsuariosPage() {
   const [password, setPassword] = useState('')
   const [rol, setRol] = useState('OPERADOR')
   const [tarifaVenta, setTarifaVenta] = useState('PRECIO_FINAL')
-  const [permisos, setPermisos] = useState<string[]>(['VENTAS'])
+  const [permisos, setPermisos] = useState<string[]>(['VENTAS_PRECIOS'])
+  const [expandedGroups, setExpandedGroups] = useState<string[]>([])
   const [showPassword, setShowPassword] = useState(false)
   
   const [buscar, setBuscar] = useState('')
@@ -374,8 +272,15 @@ export default function UsuariosPage() {
       setIdentificadorNacional(user.identificadorNacional || '')
       setRol(user.rol === 'CLIENT_ADMIN' ? 'OPERADOR' : user.rol)
       setTarifaVenta(user.tarifaVenta || 'PRECIO_FINAL')
-      setPermisos(user.permisos || [])
+      const activePerms = user.permisos || []
+      setPermisos(activePerms)
       setPassword('')
+      
+      // Auto-expand groups that have active submodules
+      const autoExpanded = CONFIG_MODULOS.filter(g =>
+        g.submodules.some(s => activePerms.includes(s.id) || activePerms.includes(s.legacyCode))
+      ).map(g => g.id)
+      setExpandedGroups(autoExpanded)
     } else {
       setUserSel(null)
       setNombre('')
@@ -384,12 +289,13 @@ export default function UsuariosPage() {
       setPassword('')
       setRol('OPERADOR')
       setTarifaVenta('PRECIO_FINAL')
-      setPermisos(['VENTAS'])
+      setPermisos(['VENTAS_PRECIOS'])
+      setExpandedGroups(['VENTAS'])
     }
     setIsModalOpen(true)
   }
 
-  const closeModal = () => { setIsModalOpen(false); setUserSel(null) }
+  const closeModal = () => { setIsModalOpen(false); setUserSel(null); setExpandedGroups([]) }
   const togglePermiso = (id: string) => setPermisos(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id])
   
   const countActivos = usuarios.length
@@ -599,19 +505,91 @@ export default function UsuariosPage() {
                   {rol !== 'CLIENT_ADMIN' && (
                      <div className="space-y-3">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1 block border-b border-gray-50 pb-2">Módulos Funcionales Autorizados</label>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-48 overflow-y-auto custom-scrollbar pr-2 py-1">
-                           {TODOS_LOS_PERMISOS.map(p => {
-                              const isActive = permisos.includes(p.id)
+                        <div className="space-y-3 max-h-72 overflow-y-auto custom-scrollbar pr-2 py-1">
+                           {CONFIG_MODULOS.map(group => {
+                              const subIds = group.submodules.map(s => s.id)
+                              
+                              const isSubmoduleSelected = (subId: string, legacyCode: string) => {
+                                return permisos.includes(subId) || permisos.includes(legacyCode)
+                              }
+
+                              const allSelected = group.submodules.every(s => isSubmoduleSelected(s.id, s.legacyCode))
+                              const noneSelected = group.submodules.every(s => !isSubmoduleSelected(s.id, s.legacyCode))
+                              const isIndeterminate = !allSelected && !noneSelected
+                              const isExpanded = expandedGroups.includes(group.id)
+
+                              const toggleGroup = () => {
+                                if (allSelected) {
+                                  const legacyCodes = group.submodules.map(s => s.legacyCode)
+                                  setPermisos(prev => prev.filter(id => !subIds.includes(id) && !legacyCodes.includes(id)))
+                                } else {
+                                  setPermisos(prev => [...new Set([...prev, ...subIds])])
+                                }
+                              }
+
+                              const toggleExpand = () => {
+                                setExpandedGroups(prev =>
+                                  prev.includes(group.id) ? prev.filter(id => id !== group.id) : [...prev, group.id]
+                                )
+                              }
+
                               return (
-                                 <button type="button" key={p.id} onClick={() => togglePermiso(p.id)} className={`flex items-start gap-3 p-3 rounded-2xl border text-left transition-all group ${isActive ? 'bg-indigo-50/50 border-indigo-200 shadow-sm' : 'bg-white border-gray-100 hover:border-indigo-100 hover:bg-gray-50/50'}`}>
-                                    <div className={`mt-0.5 w-4 h-4 rounded-md flex items-center justify-center shrink-0 transition-colors ${isActive ? 'bg-indigo-600' : 'bg-gray-200 group-hover:bg-gray-300'}`}>
-                                       {isActive && <Check size={10} className="text-white" />}
+                                 <div key={group.id} className="border border-gray-100 rounded-2xl bg-white overflow-hidden shadow-sm">
+                                    {/* Cabecera del grupo */}
+                                    <div className="flex items-center justify-between p-4 bg-gray-50/50">
+                                       <div className="flex items-center gap-3">
+                                          <input 
+                                             type="checkbox"
+                                             checked={allSelected}
+                                             ref={el => {
+                                                if (el) el.indeterminate = isIndeterminate
+                                             }}
+                                             onChange={toggleGroup}
+                                             className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                                          />
+                                          <span className="text-xs font-black text-gray-800 uppercase tracking-tight">{group.label}</span>
+                                          <span className="text-[9px] font-bold text-gray-400">
+                                             ({group.submodules.filter(s => isSubmoduleSelected(s.id, s.legacyCode)).length} de {group.submodules.length})
+                                          </span>
+                                       </div>
+                                       <button
+                                          type="button"
+                                          onClick={toggleExpand}
+                                          className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600 transition-colors"
+                                       >
+                                          {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                       </button>
                                     </div>
-                                    <div>
-                                       <div className={`text-[10px] font-black uppercase tracking-tight leading-none mb-1 ${isActive ? 'text-indigo-900' : 'text-gray-600'}`}>{p.label}</div>
-                                       <div className="text-[9px] text-gray-400 leading-tight block">{p.desc}</div>
-                                    </div>
-                                 </button>
+
+                                    {/* Sub-módulos */}
+                                    {isExpanded && (
+                                       <div className="p-4 border-t border-gray-100 bg-white space-y-3 pl-9">
+                                          {group.submodules.map(sub => {
+                                             const isChecked = isSubmoduleSelected(sub.id, sub.legacyCode)
+                                             const toggleSub = () => {
+                                                if (isChecked) {
+                                                   setPermisos(prev => prev.filter(id => id !== sub.id && id !== sub.legacyCode))
+                                                } else {
+                                                   setPermisos(prev => [...prev, sub.id])
+                                                }
+                                             }
+                                             return (
+                                                <label key={sub.id} className="flex items-center gap-3 cursor-pointer group text-left">
+                                                   <input 
+                                                      type="checkbox"
+                                                      checked={isChecked}
+                                                      onChange={toggleSub}
+                                                      className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                                                   />
+                                                   <span className="text-xs font-bold text-gray-600 group-hover:text-gray-900 transition-colors">
+                                                      {sub.label}
+                                                   </span>
+                                                </label>
+                                             )
+                                          })}
+                                       </div>
+                                    )}
+                                 </div>
                               )
                            })}
                         </div>

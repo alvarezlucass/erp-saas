@@ -41,7 +41,9 @@ router.post('/', async (req: AuthRequest, res: Response) => {
         razonSocial: data.razonSocial || null,
         cuit: data.cuit || null,
         condicionIva: data.condicionIva || 'CONSUMIDOR_FINAL',
-        tipoFactura: data.tipoFactura || 'C'
+        tipoFactura: data.tipoFactura || 'C',
+        vencimiento: data.vencimiento ? new Date(data.vencimiento) : null,
+        configSuscripcion: data.configSuscripcion || null
       }
     })
     res.json(nuevo)
@@ -72,6 +74,8 @@ router.patch('/:id', async (req: AuthRequest, res: Response) => {
         condicionIva: data.condicionIva !== undefined ? data.condicionIva : undefined,
         tipoFactura: data.tipoFactura !== undefined ? data.tipoFactura : undefined,
         activo: data.activo !== undefined ? data.activo : undefined,
+        vencimiento: data.vencimiento !== undefined ? (data.vencimiento ? new Date(data.vencimiento) : null) : undefined,
+        configSuscripcion: data.configSuscripcion !== undefined ? data.configSuscripcion : undefined,
       }
     })
     res.json(actualizado)

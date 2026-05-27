@@ -20,98 +20,100 @@ interface MenuItem {
   icon: any
 }
 
+import { hasPermission } from '../constants/modules'
+
 // Menús reestructurados alineados al flujo PyME
 const MENU_GROUPS: { title: string; icon: any; items: MenuItem[] }[] = [
   {
     title: 'Ventas',
     icon: DollarSign,
     items: [
-      { to: '/precios',              label: 'Precios', color: 'bg-amber-500', permiso: 'VENTAS', icon: Tag },
-      { to: '/presupuestos',         label: 'Presupuestos', color: 'bg-orange-500', permiso: 'VENTAS', icon: FileText },
-      { to: '/punto-venta/vendedor', label: 'Ventas', color: 'bg-pink-500', permiso: 'VENTAS', icon: DollarSign },
-      { to: '/punto-venta/caja',     label: 'Caja', color: 'bg-cyan-600', permiso: 'CAJA', icon: Wallet },
-      { to: '/comercial/revendedores', label: 'Revendedores', color: 'bg-indigo-400', permiso: 'VENTAS_CLIENTES', icon: Users },
+      { to: '/precios',              label: 'Precios', color: 'bg-amber-500', permiso: 'VENTAS_PRECIOS', icon: Tag },
+      { to: '/presupuestos',         label: 'Presupuestos', color: 'bg-orange-500', permiso: 'VENTAS_PRESUPUESTOS', icon: FileText },
+      { to: '/punto-venta/vendedor', label: 'Ventas', color: 'bg-pink-500', permiso: 'VENTAS_POS_VENDEDOR', icon: DollarSign },
+      { to: '/punto-venta/caja',     label: 'Caja', color: 'bg-cyan-600', permiso: 'VENTAS_POS_CAJA', icon: Wallet },
+      { to: '/comercial/revendedores', label: 'Revendedores', color: 'bg-indigo-400', permiso: 'VENTAS_REVENDEDORES', icon: Users },
     ]
   },
   {
     title: 'Compras',
     icon: ShoppingCart,
     items: [
-      { to: '/insumos',              label: 'Insumos', color: 'bg-teal-500', permiso: 'STOCK_EDIT', icon: Layers },
-      { to: '/compras/oc',           label: 'Ordenes de compra', color: 'bg-indigo-400', permiso: 'STOCK_INVENTORY', icon: ShoppingCart },
-      { to: '/compras/recepcion',    label: 'Recepción', color: 'bg-indigo-300', permiso: 'STOCK_INVENTORY', icon: CheckSquare },
-      { to: '/compras/devoluciones', label: 'Devoluciones', color: 'bg-rose-400', permiso: 'STOCK_INVENTORY', icon: RefreshCw },
-      { to: '/proveedores',          label: 'Proveedores', color: 'bg-indigo-500', permiso: 'STOCK_INVENTORY', icon: Truck },
+      { to: '/insumos',              label: 'Insumos', color: 'bg-teal-500', permiso: 'COMPRAS_INSUMOS', icon: Layers },
+      { to: '/compras/oc',           label: 'Ordenes de compra', color: 'bg-indigo-400', permiso: 'COMPRAS_OC', icon: ShoppingCart },
+      { to: '/compras/recepcion',    label: 'Recepción', color: 'bg-indigo-300', permiso: 'COMPRAS_RECEPCION', icon: CheckSquare },
+      { to: '/compras/devoluciones', label: 'Devoluciones', color: 'bg-rose-400', permiso: 'COMPRAS_DEVOLUCIONES', icon: RefreshCw },
+      { to: '/proveedores',          label: 'Proveedores', color: 'bg-indigo-500', permiso: 'COMPRAS_PROVEEDORES', icon: Truck },
     ]
   },
   {
     title: 'Taller',
     icon: Factory,
     items: [
-      { to: '/admin/templates',      label: 'Moldería', color: 'bg-rose-500', permiso: 'STOCK_EDIT', icon: Layers },
-      { to: '/inventario',           label: 'Control de Stock', color: 'bg-cyan-500', permiso: 'STOCK_VIEW', icon: Archive },
-      { to: '/produccion/ordenes',   label: 'Ordenes de producción', color: 'bg-orange-600', permiso: 'PRODUCCION_TALLER', icon: Play },
-      { to: '/produccion/etapas',    label: 'Control de etapas', color: 'bg-amber-600', permiso: 'PRODUCCION_TALLER', icon: LayoutGrid },
-      { to: '/produccion/entrega',   label: 'Entrega prod. terminado', color: 'bg-emerald-600', permiso: 'PRODUCCION_TALLER', icon: CheckSquare },
-      { to: '/admin/costeos',        label: 'Ajustes de costeo', color: 'bg-indigo-600', permiso: 'STOCK_EDIT', icon: PiggyBank },
+      { to: '/admin/templates',      label: 'Moldería', color: 'bg-rose-500', permiso: 'TALLER_MOLDERIA', icon: Layers },
+      { to: '/inventario',           label: 'Control de Stock', color: 'bg-cyan-500', permiso: 'TALLER_STOCK', icon: Archive },
+      { to: '/produccion/ordenes',   label: 'Ordenes de producción', color: 'bg-orange-600', permiso: 'TALLER_ORDENES', icon: Play },
+      { to: '/produccion/etapas',    label: 'Control de etapas', color: 'bg-amber-600', permiso: 'TALLER_ETAPAS', icon: LayoutGrid },
+      { to: '/produccion/entrega',   label: 'Entrega prod. terminado', color: 'bg-emerald-600', permiso: 'TALLER_ENTREGA', icon: CheckSquare },
+      { to: '/admin/costeos',        label: 'Ajustes de costeo', color: 'bg-indigo-600', permiso: 'TALLER_COSTEOS', icon: PiggyBank },
     ]
   },
   {
     title: 'Bordados',
     icon: Star,
     items: [
-      { to: '/bordados',             label: 'Ordenes de bordados', color: 'bg-violet-500', permiso: 'PRODUCCION_SPECIAL', icon: Star },
-      { to: '/terceros/ordenes',     label: 'Ordenes a terceros', color: 'bg-fuchsia-500', permiso: 'PRODUCCION_SPECIAL', icon: Star },
-      { to: '/bordados/disenos',     label: 'Diseños', color: 'bg-purple-600', permiso: 'PRODUCCION_SPECIAL', icon: Palette },
+      { to: '/bordados',             label: 'Ordenes de bordados', color: 'bg-violet-500', permiso: 'BORDADOS_ORDENES', icon: Star },
+      { to: '/terceros/ordenes',     label: 'Ordenes a terceros', color: 'bg-fuchsia-500', permiso: 'BORDADOS_TERCEROS', icon: Star },
+      { to: '/bordados/disenos',     label: 'Diseños', color: 'bg-purple-600', permiso: 'BORDADOS_DISENOS', icon: Palette },
     ]
   },
   {
     title: 'Administración',
     icon: Wallet,
     items: [
-      { to: '/finanzas/movimientos', label: 'Movimientos', color: 'bg-emerald-500', permiso: 'FINANZAS_BASIC', icon: ArrowLeftRight },
-      { to: '/finanzas/pagos',       label: 'Pagos', color: 'bg-rose-600', permiso: 'FINANZAS_BASIC', icon: Receipt },
-      { to: '/finanzas/cashflow',    label: 'Flujo de caja', color: 'bg-cyan-600', permiso: 'FINANZAS_ADV', icon: Activity },
-      { to: '/finanzas/proyecciones', label: 'Proyecciones financieras', color: 'bg-teal-600', permiso: 'FINANZAS_ADV', icon: LineChart },
+      { to: '/finanzas/movimientos', label: 'Movimientos', color: 'bg-emerald-500', permiso: 'ADMINISTRACION_MOVIMIENTOS', icon: ArrowLeftRight },
+      { to: '/finanzas/pagos',       label: 'Pagos', color: 'bg-rose-600', permiso: 'ADMINISTRACION_PAGOS', icon: Receipt },
+      { to: '/finanzas/cashflow',    label: 'Flujo de caja', color: 'bg-cyan-600', permiso: 'ADMINISTRACION_CASHFLOW', icon: Activity },
+      { to: '/finanzas/proyecciones', label: 'Proyecciones financieras', color: 'bg-teal-600', permiso: 'ADMINISTRACION_PROYECCIONES', icon: LineChart },
     ]
   },
   {
     title: 'Reportes e Inteligencia',
     icon: BarChart3,
     items: [
-      { to: '/reportes/ventas',      label: 'Reporte de Ventas', color: 'bg-emerald-500', permiso: 'REPORTES_VIEW', icon: BarChart3 },
-      { to: '/reportes/rentabilidad', label: 'Rentabilidad por producto', color: 'bg-amber-500', permiso: 'REPORTES_VIEW', icon: DollarSign },
-      { to: '/reportes/ejecutivo',   label: 'Dash Ejecutivo', color: 'bg-indigo-500', permiso: 'REPORTES_VIEW', icon: LayoutGrid },
+      { to: '/reportes/ventas',      label: 'Reporte de Ventas', color: 'bg-emerald-500', permiso: 'REPORTES_VENTAS', icon: BarChart3 },
+      { to: '/reportes/rentabilidad', label: 'Rentabilidad por producto', color: 'bg-amber-500', permiso: 'REPORTES_RENTABILIDAD', icon: DollarSign },
+      { to: '/reportes/ejecutivo',   label: 'Dash Ejecutivo', color: 'bg-indigo-500', permiso: 'REPORTES_EJECUTIVO', icon: LayoutGrid },
     ]
   },
   {
     title: 'RRHH',
     icon: Users,
     items: [
-      { to: '/rrhh/fichadas',        label: 'Fichadas y Horarios', color: 'bg-amber-600', permiso: 'FINANZAS_ADV', icon: Clock },
-      { to: '/rrhh/legajos',         label: 'Legajos', color: 'bg-indigo-500', permiso: 'FINANZAS_ADV', icon: Folder },
-      { to: '/rrhh/licencias',       label: 'Licencias', color: 'bg-red-400', permiso: 'FINANZAS_ADV', icon: FileText },
-      { to: '/rrhh/sueldos',         label: 'Sueldos', color: 'bg-orange-400', permiso: 'FINANZAS_ADV', icon: Wallet },
-      { to: '/rrhh/liquidaciones',   label: 'Liquidaciones', color: 'bg-emerald-600', permiso: 'FINANZAS_ADV', icon: Calculator },
-      { to: '/rrhh/931',             label: 'F. 931', color: 'bg-gray-500', permiso: 'FINANZAS_ADV', icon: FileText },
+      { to: '/rrhh/fichadas',        label: 'Fichadas y Horarios', color: 'bg-amber-600', permiso: 'RRHH_FICHADAS', icon: Clock },
+      { to: '/rrhh/legajos',         label: 'Legajos', color: 'bg-indigo-500', permiso: 'RRHH_LEGAJOS', icon: Folder },
+      { to: '/rrhh/licencias',       label: 'Licencias', color: 'bg-red-400', permiso: 'RRHH_LICENCIAS', icon: FileText },
+      { to: '/rrhh/sueldos',         label: 'Sueldos', color: 'bg-orange-400', permiso: 'RRHH_SUELDOS', icon: Wallet },
+      { to: '/rrhh/liquidaciones',   label: 'Liquidaciones', color: 'bg-emerald-600', permiso: 'RRHH_LIQUIDACIONES', icon: Calculator },
+      { to: '/rrhh/931',             label: 'F. 931', color: 'bg-gray-500', permiso: 'RRHH_931', icon: FileText },
     ]
   },
   {
     title: 'Sistemas y Adm. de Usuario',
     icon: Settings,
     items: [
-      { to: '/admin/usuarios',       label: 'Roles y permisos', color: 'bg-indigo-600', permiso: 'ADMIN', icon: UserCheck },
-      { to: '/admin',                label: 'Administración Global', color: 'bg-gray-400', permiso: 'ADMIN', icon: Settings },
-      { to: '/admin/importaciones',  label: 'Carga masiva de datos', color: 'bg-teal-500', permiso: 'ADMIN', icon: Settings },
-      { to: '/admin/roles',          label: 'Roles y Permisos Avanzados', color: 'bg-rose-500', permiso: 'ADMIN', icon: Settings },
+      { to: '/admin/usuarios',       label: 'Roles y permisos', color: 'bg-indigo-600', permiso: 'SISTEMAS_ROLES', icon: UserCheck },
+      { to: '/admin',                label: 'Administración Global', color: 'bg-gray-400', permiso: 'SISTEMAS_GLOBAL', icon: Settings },
+      { to: '/admin/importaciones',  label: 'Carga masiva de datos', color: 'bg-teal-500', permiso: 'SISTEMAS_IMPORTACION', icon: Settings },
+      { to: '/admin/roles',          label: 'Roles y Permisos Avanzados', color: 'bg-rose-500', permiso: 'SISTEMAS_AVANZADO', icon: Settings },
     ]
   },
   {
     title: 'Gestión Comercial',
     icon: Users,
     items: [
-      { to: '/comercial/clientes',   label: 'Gestión de Clientes', color: 'bg-blue-500', permiso: 'VENTAS_CLIENTES', icon: Users },
-      { to: '/comercial/historial',  label: 'Historial de Clientes', color: 'bg-indigo-400', permiso: 'VENTAS_CLIENTES', icon: History },
+      { to: '/comercial/clientes',   label: 'Gestión de Clientes', color: 'bg-blue-500', permiso: 'COMERCIAL_CLIENTES', icon: Users },
+      { to: '/comercial/historial',  label: 'Historial de Clientes', color: 'bg-indigo-400', permiso: 'COMERCIAL_HISTORIAL', icon: History },
     ]
   }
 ]
@@ -158,35 +160,11 @@ export function Layout() {
   const filteredGroups = MENU_GROUPS.map(group => ({
     ...group,
     items: group.items.filter(item => {
-      if (usuario?.rol === 'SUPER_ADMIN' || usuario?.rol === 'CLIENT_ADMIN') return true
-      
-      const userPerms = usuario?.permisos || []
-      
-      // ADMIN tiene acceso a todo
-      if (userPerms.includes('ADMIN')) return true
-      
       if (item.rol && usuario?.rol !== item.rol) return false
       if (item.modulo && !usuario?.modulos?.includes(item.modulo)) return false
       
       if (item.permiso) {
-        // Mapeos de permisos granulares
-        if (item.permiso === 'STOCK_VIEW' || item.permiso === 'STOCK_EDIT' || item.permiso === 'STOCK_INVENTORY') {
-          return userPerms.some(p => p.startsWith('STOCK'))
-        }
-        if (item.permiso === 'PRODUCCION_TALLER' || item.permiso === 'PRODUCCION_SPECIAL') {
-          return userPerms.some(p => p.startsWith('PRODUCCION'))
-        }
-        if (item.permiso === 'FINANZAS_BASIC' || item.permiso === 'FINANZAS_ADV') {
-          return userPerms.some(p => p.startsWith('FINANZAS')) || userPerms.includes('CAJA')
-        }
-        if (item.permiso === 'VENTAS_CLIENTES') {
-          return userPerms.includes('VENTAS') || userPerms.includes('VENTAS_CLIENTES')
-        }
-        if (item.permiso === 'REPORTES_VIEW') {
-          return userPerms.includes('REPORTES_VIEW')
-        }
-        
-        return userPerms.includes(item.permiso)
+        return hasPermission(usuario, item.permiso)
       }
       
       return true
@@ -229,11 +207,11 @@ export function Layout() {
                   <Building2 size={24} />
                 </div>
               )}
-              <div className="overflow-hidden">
-                <div className="text-sm font-black text-white tracking-tight leading-tight uppercase italic truncate">
+               <div className="overflow-hidden">
+                <div className="text-sm font-bold text-white tracking-tight leading-tight truncate">
                   {empresa?.nombre || 'Unifai SaaS'}
                 </div>
-                <div className="text-[9px] text-emerald-400 font-extrabold mt-1 uppercase tracking-[0.2em] truncate opacity-80">
+                <div className="text-xs text-emerald-400 font-semibold mt-1 truncate opacity-80">
                   {usuario?.rol === 'SUPER_ADMIN' ? 'Control Master' : 'Industrial ERP'}
                 </div>
               </div>
@@ -267,7 +245,7 @@ export function Layout() {
               {!isCollapsed ? (
                 <div className="flex items-center gap-3 px-3">
                    <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.6)]" />
-                   <div className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] opacity-70">
+                   <div className="text-xs font-semibold text-gray-500 opacity-80">
                       {group.title}
                    </div>
                 </div>
@@ -284,7 +262,7 @@ export function Layout() {
                       end={item.to === '/'}
                       onClick={() => isMobile && setIsOpen(false)}
                       className={({ isActive }) =>
-                        `flex items-center ${isCollapsed ? 'justify-center' : 'gap-4'} px-4 py-3.5 rounded-[1.2rem] text-[13px] font-black transition-all border group ${
+                        `flex items-center ${isCollapsed ? 'justify-center' : 'gap-4'} px-4 py-3.5 rounded-[1.2rem] text-sm font-semibold transition-all border group ${
                           isActive
                             ? 'bg-indigo-600 text-white shadow-[0_10px_25px_rgba(79,70,229,0.3)] border-indigo-400 scale-[1.02]'
                             : 'text-gray-400 hover:bg-white/5 hover:text-white border-transparent hover:border-white/10'
@@ -294,7 +272,7 @@ export function Layout() {
                     >
                       <Icon size={18} className="shrink-0 transition-transform group-hover:scale-110" />
                       {!isCollapsed && (
-                        <span className="tracking-tight italic uppercase whitespace-pre-wrap">{item.label}</span>
+                        <span className="tracking-tight whitespace-pre-wrap">{item.label}</span>
                       )}
                     </NavLink>
                   )
@@ -311,14 +289,14 @@ export function Layout() {
                <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-black text-xs uppercase shadow-inner shrink-0">
                   {usuario?.nombre?.substring(0,2)}
                </div>
-               <div className="flex-1 overflow-hidden">
-                  <div className="text-xs font-black text-white truncate uppercase italic tracking-tight">{usuario?.nombre}</div>
-                  <div className="text-[9px] font-bold text-gray-500 truncate uppercase tracking-widest opacity-80">{usuario?.rol}</div>
-               </div>
+                <div className="flex-1 overflow-hidden">
+                  <div className="text-sm font-semibold text-white truncate tracking-tight">{usuario?.nombre}</div>
+                  <div className="text-xs text-gray-500 truncate opacity-80">{usuario?.rol}</div>
+                </div>
             </div>
           ) : (
              <div 
-               className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-black text-xs uppercase shadow-inner"
+               className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-semibold text-xs shadow-inner"
                title={`${usuario?.nombre} (${usuario?.rol})`}
              >
                 {usuario?.nombre?.substring(0,2)}
@@ -326,7 +304,7 @@ export function Layout() {
           )}
           <button
             onClick={handleLogout}
-            className={`flex items-center justify-center gap-3 py-3.5 rounded-2xl text-[10px] font-black text-rose-400 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 transition-all uppercase tracking-[0.2em] ${isCollapsed ? 'w-10 h-10 p-0 rounded-2xl' : 'w-full'}`}
+            className={`flex items-center justify-center gap-3 py-3 rounded-2xl text-xs font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 transition-all ${isCollapsed ? 'w-10 h-10 p-0 rounded-2xl' : 'w-full'}`}
             title={isCollapsed ? "Cerrar Sesión" : undefined}
           >
             <LogOut size={14} />

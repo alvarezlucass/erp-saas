@@ -71,11 +71,11 @@ export function ProductosPage() {
   })
 
   return (
-    <div className="max-w-7xl mx-auto pb-20 px-4">
+    <div className="w-full px-4 md:px-12 pb-20">
       <Toaster position="top-right" />
       
       {/* HEADER INDUSTRIAL REFINADO */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-16 gap-10">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-10 gap-10">
         <div className="space-y-4">
           <h1 className="text-5xl font-black text-white uppercase tracking-tight italic leading-none">Ingeniería de Productos</h1>
           <div className="flex items-center gap-4">
@@ -106,7 +106,7 @@ export function ProductosPage() {
 
       {tab === 'catalogo' && (
         <div className="animate-in fade-in slide-in-from-bottom-8 duration-1000">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mb-10">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mb-6">
              <div className="md:col-span-6 relative group">
                <input 
                  value={buscar}
@@ -147,7 +147,7 @@ export function ProductosPage() {
           </div>
 
           {/* FILTROS AVANZADOS */}
-          <div className="flex flex-wrap items-center gap-3 mb-8">
+          <div className="flex flex-wrap items-center gap-3 mb-6">
             <div className="flex bg-[#1a1b1e] p-2 rounded-2xl border border-white/5 gap-1 shadow-inner overflow-x-auto no-scrollbar max-w-full">
               <button onClick={() => setFiltroCategoria('')} className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${!filtroCategoria ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}>TODOS</button>
               {categorias.map((c: any) => (
@@ -172,17 +172,17 @@ export function ProductosPage() {
               <table className="w-full text-left border-collapse">
                 <thead className="bg-black/20">
                   <tr>
-                    <th className="px-8 py-6 text-xs uppercase font-black tracking-[0.2em] text-gray-400">Producto / Ficha Técnica</th>
-                    <th className="px-8 py-6 text-xs uppercase font-black tracking-[0.2em] text-gray-400">Categoría & Temp</th>
-                    <th className="px-8 py-6 text-xs uppercase font-black tracking-[0.2em] text-gray-400">Curva Standard</th>
-                    <th className="px-8 py-6 text-xs uppercase font-black tracking-[0.2em] text-gray-400">Origen</th>
-                    <th className="px-8 py-6 text-xs uppercase font-black tracking-[0.2em] text-gray-400 text-center">Acciones</th>
+                    <th className="px-8 py-4 text-xs uppercase font-black tracking-[0.2em] text-gray-400">Producto / Ficha Técnica</th>
+                    <th className="px-8 py-4 text-xs uppercase font-black tracking-[0.2em] text-gray-400">Categoría & Temp</th>
+                    <th className="px-8 py-4 text-xs uppercase font-black tracking-[0.2em] text-gray-400">Curva Standard</th>
+                    <th className="px-8 py-4 text-xs uppercase font-black tracking-[0.2em] text-gray-400">Origen</th>
+                    <th className="px-8 py-4 text-xs uppercase font-black tracking-[0.2em] text-center">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.02]">
                   {productosFiltrados.map((p: any) => (
                     <tr key={p.id} className={`group hover:bg-white/[0.01] transition-all cursor-default ${!p.activo ? 'opacity-30 grayscale' : ''}`}>
-                      <td className="px-8 py-6">
+                      <td className="px-8 py-4">
                         <div className="flex items-center gap-4">
                            <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 font-black text-xs border border-indigo-500/10 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-lg">
                              {p.nombre.substring(0, 2).toUpperCase()}
@@ -198,7 +198,7 @@ export function ProductosPage() {
                            </div>
                         </div>
                       </td>
-                      <td className="px-8 py-6">
+                      <td className="px-8 py-4">
                         <div className="flex flex-col gap-2">
                           <span className="text-sm font-black uppercase tracking-widest text-indigo-400">
                             {p.categoria?.nombre || 'General'}
@@ -208,7 +208,7 @@ export function ProductosPage() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-8 py-6">
+                      <td className="px-8 py-4">
                         <div className="flex flex-wrap gap-2 max-w-[220px]">
                           {p.talles.map((t: any) => (
                             <span key={t.id} className="text-sm font-black text-gray-300 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5 transition-colors">
@@ -217,12 +217,12 @@ export function ProductosPage() {
                           ))}
                         </div>
                       </td>
-                      <td className="px-8 py-6">
+                      <td className="px-8 py-4">
                         <span className={`text-[11px] font-black uppercase tracking-widest px-3 py-1.5 rounded-md border inline-block ${p.tipo === 'FABRICADO' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
                            {p.tipo}
                         </span>
                       </td>
-                      <td className="px-8 py-6">
+                      <td className="px-8 py-4">
                         <div className="flex justify-center gap-3">
                           <button onClick={() => setVerFicha(p)} className="bg-white/5 hover:bg-indigo-600 text-gray-500 hover:text-white p-3 rounded-2xl transition-all border border-white/5" title="Ver Ficha">👁️</button>
                           {!isReadOnly && (

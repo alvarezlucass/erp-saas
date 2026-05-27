@@ -39,6 +39,8 @@ const queryClient = new QueryClient({
   },
 })
 
+import { hasPermission } from './constants/modules'
+
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore(s => s.token)
   return token ? <>{children}</> : <Navigate to="/login" replace />
@@ -51,46 +53,13 @@ function SuperAdminRoute({ children }: { children: React.ReactNode }) {
 
 function Guard({ permission, children }: { permission: string, children: React.ReactNode }) {
   const usuario = useAuthStore(s => s.usuario)
-  if (usuario?.rol === 'SUPER_ADMIN' || usuario?.rol === 'CLIENT_ADMIN') return <>{children}</>
   
-  const userPerms = usuario?.permisos || []
-  
-  // ADMIN tiene acceso total
-  if (userPerms.includes('ADMIN')) return <>{children}</>
-  
-  let hasAccess = false
-  
-  switch (permission) {
-    case 'STOCK':
-      // STOCK es el permiso general de catálogo/compras/inventario.
-      // Permitimos acceso si tiene cualquier permiso relacionado con stock.
-      hasAccess = userPerms.some(p => ['STOCK', 'STOCK_VIEW', 'STOCK_EDIT', 'STOCK_PRICING', 'STOCK_INVENTORY'].includes(p))
-      break
-    case 'VENTAS':
-      // VENTAS es el permiso de presupuestos, ventas mostrador, clientes, etc.
-      hasAccess = userPerms.some(p => ['VENTAS', 'VENTAS_CLIENTES'].includes(p))
-      break
-    case 'CAJA':
-      // CAJA es para cobros y administración.
-      hasAccess = userPerms.some(p => ['CAJA', 'FINANZAS_BASIC'].includes(p))
-      break
-    case 'PRODUCCION':
-      // PRODUCCION es para pedidos, kanban, etapas y bordados.
-      hasAccess = userPerms.some(p => ['PRODUCCION', 'PRODUCCION_TALLER', 'PRODUCCION_SPECIAL'].includes(p))
-      break
-    case 'ADMIN':
-      // ADMIN es para administración de equipo, costeos, importaciones y templates.
-      hasAccess = userPerms.some(p => ['ADMIN', 'STOCK_EDIT'].includes(p))
-      break
-    default:
-      hasAccess = userPerms.includes(permission)
+  if (hasPermission(usuario, permission)) {
+    return <>{children}</>
   }
 
-  if (!hasAccess) {
-    toast.error('Acceso denegado: No tienes permiso para esta sección', { id: 'auth-error' })
-    return <Navigate to="/" replace />
-  }
-  return <>{children}</>
+  toast.error('Acceso denegado: No tienes permiso para esta sección', { id: 'auth-error' })
+  return <Navigate to="/" replace />
 }
 
 export default function App() {
@@ -121,31 +90,31 @@ export default function App() {
             <Route index element={<DashboardPage />} />
 
             {/* PRODUCTOS Y STOCK */}
-            <Route path="productos" element={<Guard permission="STOCK"><ProductosPage /></Guard>} />
-            <Route path="productos/alta-industrial" element={<Guard permission="STOCK"><AltaProductoPage /></Guard>} />
-            <Route path="productos/alta-retail" element={<Guard permission="STOCK"><AltaProductoRetailPage /></Guard>} />
-            <Route path="productos/:id/editar" element={<Guard permission="STOCK"><AltaProductoPage /></Guard>} />
-            <Route path="productos/:id/editar-retail" element={<Guard permission="STOCK"><AltaProductoRetailPage /></Guard>} />
-            <Route path="inventario" element={<Guard permission="STOCK"><InventarioPage /></Guard>} />
-            <Route path="insumos" element={<Guard permission="STOCK"><InsumosPage /></Guard>} />
+            <Route path="productos" element={<Guard permission="TALLER_STOCK"><ProductosPage /></Guard>} />
+            <Route path="productos/alta-industrial" element={<Guard permission="TALLER_STOCK"><AltaProductoPage /></Guard>} />
+            <Route path="productos/alta-retail" element={<Guard permission="TALLER_STOCK"><AltaProductoRetailPage /></Guard>} />
+            <Route path="productos/:id/editar" element={<Guard permission="TALLER_STOCK"><AltaProductoPage /></Guard>} />
+            <Route path="productos/:id/editar-retail" element={<Guard permission="TALLER_STOCK"><AltaProductoRetailPage /></Guard>} />
+            <Route path="inventario" element={<Guard permission="TALLER_STOCK"><InventarioPage /></Guard>} />
+            <Route path="insumos" element={<Guard permission="COMPRAS_INSUMOS"><InsumosPage /></Guard>} />
 
             {/* VENTAS */}
-            <Route path="precios" element={<Guard permission="VENTAS"><PreciosPage /></Guard>} />
-            <Route path="precios/programados" element={<Guard permission="VENTAS"><PreciosProgramadosPage /></Guard>} />
-            <Route path="presupuestos" element={<Guard permission="VENTAS"><PresupuestosPage /></Guard>} />
-            <Route path="punto-venta/vendedor" element={<Guard permission="VENTAS"><PuntoVentaVendedorPage /></Guard>} />
-            <Route path="punto-venta/caja" element={<Guard permission="CAJA"><PuntoVentaCajeroPage /></Guard>} />
-            <Route path="finanzas/cuenta-corriente/:tipo/:id" element={<Guard permission="VENTAS"><CuentaCorrientePage /></Guard>} />
+            <Route path="precios" element={<Guard permission="VENTAS_PRECIOS"><PreciosPage /></Guard>} />
+            <Route path="precios/programados" element={<Guard permission="VENTAS_PRECIOS"><PreciosProgramadosPage /></Guard>} />
+            <Route path="presupuestos" element={<Guard permission="VENTAS_PRESUPUESTOS"><PresupuestosPage /></Guard>} />
+            <Route path="punto-venta/vendedor" element={<Guard permission="VENTAS_POS_VENDEDOR"><PuntoVentaVendedorPage /></Guard>} />
+            <Route path="punto-venta/caja" element={<Guard permission="VENTAS_POS_CAJA"><PuntoVentaCajeroPage /></Guard>} />
+            <Route path="finanzas/cuenta-corriente/:tipo/:id" element={<Guard permission="ADMINISTRACION_MOVIMIENTOS"><CuentaCorrientePage /></Guard>} />
 
             {/* PRODUCCION */}
-            <Route path="pedidos" element={<Guard permission="PRODUCCION"><PedidosPage /></Guard>} />
-            <Route path="bordados" element={<Guard permission="PRODUCCION"><BordadosPage /></Guard>} />
+            <Route path="pedidos" element={<Guard permission="TALLER_ORDENES"><PedidosPage /></Guard>} />
+            <Route path="bordados" element={<Guard permission="BORDADOS_ORDENES"><BordadosPage /></Guard>} />
             <Route path="bordados/disenos" element={<ComingSoonPage />} />
 
             {/* COMPRAS */}
-            <Route path="proveedores" element={<Guard permission="STOCK"><ProveedoresPage /></Guard>} />
-            <Route path="compras/oc" element={<Guard permission="STOCK"><OrdenesCompraPage /></Guard>} />
-            <Route path="compras/recepcion" element={<Guard permission="STOCK"><RecepcionMercaderiaPage /></Guard>} />
+            <Route path="proveedores" element={<Guard permission="COMPRAS_PROVEEDORES"><ProveedoresPage /></Guard>} />
+            <Route path="compras/oc" element={<Guard permission="COMPRAS_OC"><OrdenesCompraPage /></Guard>} />
+            <Route path="compras/recepcion" element={<Guard permission="COMPRAS_RECEPCION"><RecepcionMercaderiaPage /></Guard>} />
             <Route path="compras/devoluciones" element={<ComingSoonPage />} />
 
             {/* PRODUCCION AVANZADA / TALLER */}
@@ -173,7 +142,7 @@ export default function App() {
             <Route path="rrhh/931" element={<ComingSoonPage />} />
 
             {/* COMERCIAL */}
-            <Route path="comercial/clientes" element={<Guard permission="VENTAS"><ClientesPage /></Guard>} />
+            <Route path="comercial/clientes" element={<Guard permission="COMERCIAL_CLIENTES"><ClientesPage /></Guard>} />
             <Route path="comercial/historial" element={<ComingSoonPage />} />
             <Route path="comercial/revendedores" element={<ComingSoonPage />} />
 
@@ -183,11 +152,11 @@ export default function App() {
             <Route path="reportes/ejecutivo" element={<ComingSoonPage />} />
 
             {/* ADMIN */}
-            <Route path="admin" element={<Guard permission="CAJA"><AdminPage /></Guard>} />
-            <Route path="admin/usuarios" element={<Guard permission="ADMIN"><UsuariosPage /></Guard>} />
-            <Route path="admin/templates" element={<Guard permission="ADMIN"><CategoriasPage /></Guard>} />
-            <Route path="admin/costeos" element={<Guard permission="ADMIN"><AjustesCosteoPage /></Guard>} />
-            <Route path="admin/importaciones" element={<Guard permission="ADMIN"><ImportacionesPage /></Guard>} />
+            <Route path="admin" element={<Guard permission="SISTEMAS_GLOBAL"><AdminPage /></Guard>} />
+            <Route path="admin/usuarios" element={<Guard permission="SISTEMAS_ROLES"><UsuariosPage /></Guard>} />
+            <Route path="admin/templates" element={<Guard permission="TALLER_MOLDERIA"><CategoriasPage /></Guard>} />
+            <Route path="admin/costeos" element={<Guard permission="TALLER_COSTEOS"><AjustesCosteoPage /></Guard>} />
+            <Route path="admin/importaciones" element={<Guard permission="SISTEMAS_IMPORTACION"><ImportacionesPage /></Guard>} />
             <Route path="admin/roles" element={<ComingSoonPage />} />
 
             <Route path="super-admin" element={<SuperAdminRoute><SuperAdminPage /></SuperAdminRoute>} />
