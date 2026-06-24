@@ -102,7 +102,7 @@ if (process.env.NODE_ENV === 'production') {
 
 app.use(errorHandler)
 
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`🚀 Unifai API v0.1.5 (Industrial Build) corriendo en http://localhost:${PORT}`)
   console.log('✅ Rutas de Super Admin sincronizadas con usuariosExtra')
   startCronPrecios()
