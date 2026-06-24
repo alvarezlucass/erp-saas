@@ -36,6 +36,7 @@ import { startCronPrecios } from './services/cronPrecios'
 dotenv.config()
 
 const app = express()
+// Force reload environment variables
 const PORT = process.env.PORT || 3001
 
 app.use(cors({
@@ -101,7 +102,7 @@ if (process.env.NODE_ENV === 'production') {
 
 app.use(errorHandler)
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Unifai API v0.1.5 (Industrial Build) corriendo en http://localhost:${PORT}`)
   console.log('✅ Rutas de Super Admin sincronizadas con usuariosExtra')
   startCronPrecios()
