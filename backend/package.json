@@ -10,7 +10,8 @@
     "db:migrate": "prisma migrate dev && tsx scripts/enable-rls.ts",
     "db:generate": "prisma generate",
     "db:seed": "tsx src/seed.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^5.14.0",
