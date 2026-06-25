@@ -1,5 +1,0 @@
-[variables]
-NIXPACKS_NO_PRISMA = "1"
-
-[start]
-cmd = "npx prisma migrate resolve --applied 0_init ; npm start"
