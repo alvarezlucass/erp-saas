@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { supabase } from '../lib/supabase'
 
 interface MembresiaConfig {
   empresaId: string
@@ -27,7 +28,7 @@ interface AuthState {
   usuario: Usuario | null
   setAuth: (token: string, usuario: Usuario) => void
   setUsuario: (usuario: Usuario) => void
-  logout: () => void
+  logout: () => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -37,7 +38,8 @@ export const useAuthStore = create<AuthState>()(
       usuario: null,
       setAuth: (token, usuario) => set({ token, usuario }),
       setUsuario: (usuario) => set({ usuario }),
-      logout:  () => {
+      logout:  async () => {
+        await supabase.auth.signOut()
         set({ token: null, usuario: null })
         localStorage.removeItem('unifai-auth')
       },

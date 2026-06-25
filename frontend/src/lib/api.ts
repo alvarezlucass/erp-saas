@@ -1,5 +1,8 @@
 import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
+import { useOfflineStore } from '../store/offlineStore'
+import { toast } from 'sonner'
+import { supabase } from './supabase'
 
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001/api',
@@ -12,14 +15,112 @@ api.interceptors.request.use(config => {
   return config
 })
 
-// Si el token expiró, logout automático
+// Función auxiliar para obtener un título legible del request offline
+function getRequestTitle(config: any): string {
+  const url = config.url || ''
+  const method = config.method?.toUpperCase() || ''
+  let data: any = {}
+  try {
+    data = typeof config.data === 'string' ? JSON.parse(config.data) : config.data || {}
+  } catch (e) {
+    // Ignorar si no se puede parsear
+  }
+
+  if (url.includes('/presupuestos')) {
+    if (method === 'POST') {
+      return `Emitir Presupuesto (${data.clienteNombre || 'Cliente Directo'})`
+    }
+    if (url.includes('/estado') && method === 'PATCH') {
+      return `Actualizar Estado Presupuesto`
+    }
+  }
+  if (url.includes('/clientes') && method === 'POST') {
+    return `Crear Cliente (${data.nombre || ''} ${data.apellido || ''})`
+  }
+  if (url.includes('/insumos')) {
+    if (method === 'POST') return `Crear Insumo (${data.nombre || ''})`
+    if (method === 'PATCH') return `Editar Insumo (${data.nombre || ''})`
+    if (url.includes('/stock-ajuste') && method === 'POST') return `Ajustar Stock Insumo`
+  }
+  if (url.includes('/productos')) {
+    if (method === 'POST') return `Crear Producto (${data.nombre || ''})`
+    if (method === 'PATCH') return `Editar Producto (${data.nombre || ''})`
+    if (url.includes('/stock-ajuste') && method === 'POST') return `Ajustar Stock Producto`
+  }
+  if (url.includes('/proveedores') && method === 'POST') {
+    return `Crear Proveedor (${data.nombre || ''})`
+  }
+  if (url.includes('/produccion') && url.includes('/aprobar') && method === 'POST') {
+    return `Aprobar Presupuesto`
+  }
+  if (url.includes('/compras/ordenes') && method === 'POST') {
+    return `Crear Orden de Compra`
+  }
+
+  return `${method} ${url}`
+}
+
+// Si el token expiró, logout automático; e interceptar cortes de red para guardar en cola offline
 api.interceptors.response.use(
   res => res,
   err => {
+    const originalRequest = err.config
+    
+    // Si no hay err.config, no podemos encolar la solicitud
+    if (!originalRequest) {
+      return Promise.reject(err)
+    }
+
+    // Verificar si es un error de red o de timeout (sin respuesta del servidor)
+    const isNetworkError = !err.response || err.code === 'ERR_NETWORK' || err.message === 'Network Error' || err.code === 'ECONNABORTED'
+    
+    // Métodos de escritura
+    const isWriteMethod = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(originalRequest.method?.toUpperCase() || '')
+    
+    // Ignorar rutas de login o registro
+    const isAuthRequest = originalRequest.url?.includes('/auth/')
+    
+    // Si es error de red en escritura y no es login: encolar
+    if (isNetworkError && isWriteMethod && !isAuthRequest) {
+      const title = getRequestTitle(originalRequest)
+      let requestData = originalRequest.data
+      try {
+        if (typeof requestData === 'string') {
+          requestData = JSON.parse(requestData)
+        }
+      } catch (e) {
+        // Dejar como está
+      }
+
+      useOfflineStore.getState().addRequest({
+        url: originalRequest.url || '',
+        method: originalRequest.method?.toUpperCase() as any,
+        body: requestData,
+        title,
+        headers: originalRequest.headers
+      })
+
+      toast.warning(`Trabajando sin conexión. "${title}" guardado localmente (pendiente de sincronización).`, {
+        duration: 6000,
+        id: `offline-${originalRequest.url}-${Date.now()}`
+      })
+
+      // Retornar resolve con datos ficticios para evitar que la UI se rompa
+      return Promise.resolve({
+        data: { id: 'temp-' + Math.random().toString(36).substring(2, 9), status: 'QUEUED', message: 'Offline queued' },
+        status: 202,
+        statusText: 'Accepted (Offline Queued)',
+        headers: {},
+        config: originalRequest
+      })
+    }
+
+    // Si el token expiró
     if (err.response?.status === 401) {
       useAuthStore.getState().logout()
       window.location.href = '/login'
     }
+    
     return Promise.reject(err)
   }
 )
@@ -264,17 +365,44 @@ export interface LineaRecepcion {
 // ─── APIS ───────────────────────────────────────────────────────────────────
 
 export const insumosApi = {
-  listar:     (params?: { tipo?: string; categoria?: string; buscar?: string }): Promise<Insumo[]> =>
-    api.get<Insumo[]>('/insumos', { params }).then(r => r.data),
-  trazabilidad:  (id: string): Promise<{ historial: any[]; usos: any[] }> =>
-    api.get(`/insumos/${id}/trazabilidad`).then(r => r.data),
-  crear:      (data: any): Promise<Insumo> => api.post('/insumos', data).then(r => r.data),
-  editar:     (id: string, data: any): Promise<Insumo> => api.patch(`/insumos/${id}`, data).then(r => r.data),
-  eliminar:   (id: string): Promise<any> => api.delete(`/insumos/${id}`).then(r => r.data),
-  actualizarPrecio: (id: string, costo: number, motivo?: string): Promise<any> =>
-    api.patch(`/insumos/${id}/precio`, { costo, motivo }).then(r => r.data),
-  actualizarMasivo: (data: { porcentaje: number; tipo?: string; categoria?: string; motivo?: string }): Promise<{actualizados: number}> => 
-    api.post('/insumos/actualizar-masivo', data).then(r => r.data),
+  listar: async (params?: { tipo?: string; categoria?: string; buscar?: string }): Promise<Insumo[]> => {
+    let query = supabase.from('insumos').select('*').order('creadoEn', { ascending: false });
+    if (params?.tipo) query = query.eq('tipo', params.tipo);
+    if (params?.categoria) query = query.eq('categoria', params.categoria);
+    if (params?.buscar) query = query.ilike('nombre', `%${params.buscar}%`);
+    const { data, error } = await query;
+    if (error) throw error;
+    return data as Insumo[];
+  },
+  trazabilidad: async (id: string): Promise<{ historial: any[]; usos: any[] }> => {
+    // Placeholder para reescribir consultas complejas
+    const { data } = await supabase.from('MovimientoStock').select('*').eq('insumoId', id);
+    return { historial: data || [], usos: [] };
+  },
+  crear: async (data: any): Promise<Insumo> => {
+    const { data: result, error } = await supabase.from('insumos').insert([data]).select().single();
+    if (error) throw error;
+    return result as Insumo;
+  },
+  editar: async (id: string, data: any): Promise<Insumo> => {
+    const { data: result, error } = await supabase.from('insumos').update(data).eq('id', id).select().single();
+    if (error) throw error;
+    return result as Insumo;
+  },
+  eliminar: async (id: string): Promise<any> => {
+    const { error } = await supabase.from('insumos').delete().eq('id', id);
+    if (error) throw error;
+    return { success: true };
+  },
+  actualizarPrecio: async (id: string, costo: number, motivo?: string): Promise<any> => {
+    const { data: result, error } = await supabase.from('insumos').update({ costoActual: costo }).eq('id', id).select().single();
+    if (error) throw error;
+    return result;
+  },
+  actualizarMasivo: async (data: { porcentaje: number; tipo?: string; categoria?: string; motivo?: string }): Promise<{actualizados: number}> => {
+    // Para operaciones masivas, es mejor usar Edge Functions de Supabase en vez del cliente JS.
+    throw new Error("Migrando a Edge Functions. Temporalmente no disponible.");
+  },
 }
 
 export const proveedoresApi = {
@@ -501,8 +629,38 @@ export const configuracionApi = {
 }
 
 export const authApi = {
-  login: (emailOrDni: string, password: string) =>
-    api.post('/auth/login', { email: emailOrDni, password }).then(r => r.data),
+  login: async (emailOrDni: string, password: string) => {
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: emailOrDni,
+      password,
+    })
+    if (authError) throw authError
+
+    const { data: userData, error: userError } = await supabase
+      .from('usuarios')
+      .select('*, membresias(*, empresa:empresas(*))')
+      .eq('id', authData.user.id)
+      .single()
+    
+    if (userError) throw userError
+
+    // Parse data to match expected structure
+    const usuario = {
+      ...userData,
+      empresaId: userData.membresias?.[0]?.empresaId || '',
+      rol: userData.membresias?.[0]?.rol || 'OPERADOR',
+      permisos: userData.membresias?.[0]?.permisos || [],
+      modulos: userData.membresias?.[0]?.empresa?.modulos || [],
+      membresias: userData.membresias?.map((m: any) => ({
+        empresaId: m.empresaId,
+        empresaNombre: m.empresa.nombre,
+        rol: m.rol,
+        preferencias: m.preferencias,
+      }))
+    }
+
+    return { token: authData.session.access_token, usuario }
+  },
   registrarEmpresa: (data: any) =>
     api.post('/auth/register-empresa', data).then(r => r.data),
 }
