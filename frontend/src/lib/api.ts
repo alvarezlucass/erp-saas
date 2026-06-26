@@ -729,8 +729,70 @@ export const authApi = {
 
     return { token: authData.session.access_token, usuario }
   },
-  registrarEmpresa: (data: any) =>
-    api.post('/auth/register-empresa', data).then(r => r.data),
+  registrarEmpresa: async (data: any) => {
+    // 1. Sign up user in Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+      options: {
+        data: { nombre: data.nombreDueño }
+      }
+    });
+    if (authError) throw authError;
+    if (!authData.user) throw new Error("Error creando usuario en Auth");
+
+    // Esperar un segundo para asegurar que el Trigger de base de datos haya creado el registro en public.usuarios
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // 2. Crear la Empresa
+    const { data: empresa, error: empError } = await supabase.from('empresas').insert([{
+      nombre: data.nombreEmpresa,
+      razonSocial: data.nombreEmpresa,
+      cuit: data.cuit,
+      modulos: data.modulos,
+      activa: true
+    }]).select().single();
+    if (empError) throw empError;
+
+    // 3. Crear Membresia SUPER_ADMIN
+    const { error: memError } = await supabase.from('membresias').insert([{
+      usuarioId: authData.user.id,
+      empresaId: empresa.id,
+      rol: 'SUPER_ADMIN',
+      permisos: ['TODO']
+    }]);
+    if (memError) throw memError;
+
+    // Login manual con el usuario creado
+    const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+      email: data.email,
+      password: data.password,
+    });
+    if (loginError) throw loginError;
+
+    const { data: userData, error: userError } = await supabase
+      .from('usuarios')
+      .select('*, membresias(*, empresa:empresas(*))')
+      .eq('id', authData.user.id)
+      .single();
+    if (userError) throw userError;
+
+    const usuario = {
+      ...userData,
+      empresaId: empresa.id,
+      rol: 'SUPER_ADMIN',
+      permisos: ['TODO'],
+      modulos: data.modulos,
+      membresias: userData.membresias?.map((m: any) => ({
+        empresaId: m.empresaId,
+        empresaNombre: m.empresa.nombre,
+        rol: m.rol,
+        preferencias: m.preferencias,
+      }))
+    };
+
+    return { token: loginData.session.access_token, usuario };
+  },
 }
 
 export const usuariosApi = {
