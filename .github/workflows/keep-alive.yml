@@ -1,0 +1,19 @@
+name: Keep Supabase Alive
+
+on:
+  schedule:
+    # Se ejecuta todos los días a las 10:00 AM UTC
+    - cron: '0 10 * * *'
+  workflow_dispatch: # Permite ejecutarlo manualmente si es necesario
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase API
+        run: |
+          echo "Haciendo ping a Supabase para mantener el proyecto activo..."
+          curl -s -o /dev/null -w "%{http_code}" \
+          -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+          -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+          "https://sdbauortmlqyojnkaylr.supabase.co/rest/v1/usuarios?select=id&limit=1"

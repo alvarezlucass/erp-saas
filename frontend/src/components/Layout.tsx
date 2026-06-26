@@ -1,6 +1,7 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { useAuthStore } from '../store/authStore'
+import { useOfflineStore } from '../store/offlineStore'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Menu, X, LogOut, LayoutGrid, Building2, ShoppingCart, Factory, Star, Wallet, Users, BarChart3, Settings,
@@ -121,6 +122,11 @@ const MENU_GROUPS: { title: string; icon: any; items: MenuItem[] }[] = [
 export function Layout() {
   const { usuario, logout } = useAuthStore()
   const navigate = useNavigate()
+
+  const isOnline = useOfflineStore(s => s.isOnline)
+  const isSyncing = useOfflineStore(s => s.isSyncing)
+  const offlineQueue = useOfflineStore(s => s.offlineQueue)
+  const processQueue = useOfflineStore(s => s.processQueue)
 
   const { data: empresa } = useQuery({
     queryKey: ['mi-empresa'],
@@ -314,6 +320,55 @@ export function Layout() {
       </motion.aside>
 
       <div className="flex-1 flex flex-col overflow-hidden relative bg-[#0a0a0b]">
+        {/* Banner de Sincronización Offline */}
+        <AnimatePresence>
+          {!isOnline && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="bg-amber-500/10 border-b border-amber-500/20 px-6 py-3 flex items-center justify-between gap-4 text-amber-400 text-xs font-bold shrink-0"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.8)]" />
+                <span>Trabajando sin conexión (Offline). Las ventas, clientes y cambios se guardarán localmente.</span>
+              </div>
+              {offlineQueue.length > 0 && (
+                <span className="bg-amber-500/20 px-2.5 py-1 rounded-lg">
+                  {offlineQueue.length} pendiente(s)
+                </span>
+              )}
+            </motion.div>
+          )}
+
+          {isOnline && offlineQueue.length > 0 && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="bg-indigo-600/10 border-b border-indigo-500/20 px-6 py-3 flex items-center justify-between gap-4 text-indigo-400 text-xs font-bold shrink-0"
+            >
+              <div className="flex items-center gap-2.5">
+                <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
+                <span>
+                  {isSyncing 
+                    ? `Sincronizando ${offlineQueue.length} acción(es) local(es) con la nube...` 
+                    : `Tienes ${offlineQueue.length} acción(es) local(es) pendiente(s) de sincronizar.`
+                  }
+                </span>
+              </div>
+              {!isSyncing && (
+                <button
+                  onClick={() => processQueue()}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg active:scale-95 transition-all uppercase tracking-wider text-[10px]"
+                >
+                  Sincronizar ahora
+                </button>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {isMobile && !isOpen && (
           <motion.button 
             initial={{ opacity: 0, scale: 0.8 }}

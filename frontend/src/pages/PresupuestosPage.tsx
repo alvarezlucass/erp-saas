@@ -31,18 +31,31 @@ function NuevoPresupuesto({ onClose }: { onClose: () => void }) {
   const { data: productos = [] } = useQuery({ queryKey: ['productos'], queryFn: () => productosApi.listar() })
   const { data: clientes = [] } = useQuery({ queryKey: ['clientes'], queryFn: () => clientesApi.listar() })
   
-  const [clienteId, setClienteId] = useState('')
-  const [institucionId, setInstitucionId] = useState('')
+  // Cargar borrador completo desde localStorage
+  const draft = (() => {
+    const draftStr = localStorage.getItem('unifai-draft-budget')
+    if (draftStr) {
+      try {
+        return JSON.parse(draftStr)
+      } catch (e) {
+        console.error("Error al parsear borrador de presupuesto", e)
+      }
+    }
+    return null
+  })()
+
+  const [clienteId, setClienteId] = useState(draft?.clienteId || '')
+  const [institucionId, setInstitucionId] = useState(draft?.institucionId || '')
   
   const clienteSel = clientes.find((i: any) => i.id === clienteId)
   
-  const [modoPago, setModoPago] = useState('TRANSFERENCIA')
-  const [senia, setSenia] = useState('')
-  const [notas, setNotas] = useState('')
-  const [aplicaIva, setAplicaIva] = useState(false)
-  const [tipoVencimiento, setTipoVencimiento] = useState<'HABILES' | 'CORRIDOS'>('CORRIDOS')
-  const [diasVigencia, setDiasVigencia] = useState(15)
-  const [canal, setCanal] = useState<'OFFICIAL' | 'GESTION'>('GESTION')
+  const [modoPago, setModoPago] = useState(draft?.modoPago || 'TRANSFERENCIA')
+  const [senia, setSenia] = useState(draft?.senia || '')
+  const [notas, setNotas] = useState(draft?.notas || '')
+  const [aplicaIva, setAplicaIva] = useState(draft?.aplicaIva ?? false)
+  const [tipoVencimiento, setTipoVencimiento] = useState<'HABILES' | 'CORRIDOS'>(draft?.tipoVencimiento || 'CORRIDOS')
+  const [diasVigencia, setDiasVigencia] = useState(draft?.diasVigencia || 15)
+  const [canal, setCanal] = useState<'OFFICIAL' | 'GESTION'>(draft?.canal || 'GESTION')
   const [leadTimeMax, setLeadTimeMax] = useState(0)
 
   // Nuevo Cliente Rapido
@@ -73,26 +86,33 @@ function NuevoPresupuesto({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     if (clienteSel) {
       setAplicaIva(clienteSel.tipoFactura === 'A')
-    } else {
-      setAplicaIva(false)
     }
   }, [clienteSel])
 
   // Cargar líneas iniciales desde localStorage o por defecto
   const [lineas, setLineas] = useState<Linea[]>(() => {
-    const draftStr = localStorage.getItem('unifai-draft-budget')
-    if (draftStr) {
-      try {
-        const draft = JSON.parse(draftStr)
-        if (draft.lineas && draft.lineas.length > 0) {
-          return draft.lineas
-        }
-      } catch (e) {
-        console.error("Error al leer borrador de presupuesto", e)
-      }
+    if (draft?.lineas && draft.lineas.length > 0) {
+      return draft.lineas
     }
     return [{ tipoItem: 'PRODUCTO', productoNombre: '', talle: '', bordado: '', cantidad: 1, precioUnitario: 0, precioBordado: 0, precioEstampado: 0 }]
   })
+
+  // Auto-guardar borrador completo en localStorage
+  useEffect(() => {
+    const draftObj = {
+      clienteId,
+      institucionId,
+      modoPago,
+      senia,
+      notas,
+      aplicaIva,
+      tipoVencimiento,
+      diasVigencia,
+      canal,
+      lineas
+    }
+    localStorage.setItem('unifai-draft-budget', JSON.stringify(draftObj))
+  }, [clienteId, institucionId, modoPago, senia, notas, aplicaIva, tipoVencimiento, diasVigencia, canal, lineas])
 
   useEffect(() => {
     // Calcular el lead time máximo de todos los productos en las líneas

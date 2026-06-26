@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { LoginPage } from './pages/LoginPage'
@@ -32,12 +32,10 @@ import PreciosProgramadosPage from './pages/PreciosProgramadosPage'
 import CuentaCorrientePage from './pages/CuentaCorrientePage'
 import { Toaster, toast } from 'sonner'
 import { useAuthStore } from './store/authStore'
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: { staleTime: 1000 * 60 * 5, retry: 1 },
-  },
-})
+import { PWAInstallPrompt } from './components/PWAInstallPrompt'
+import { queryClient } from './lib/queryClient'
+import { useOfflineStore } from './store/offlineStore'
+import { useEffect } from 'react'
 
 import { hasPermission } from './constants/modules'
 
@@ -64,6 +62,20 @@ function Guard({ permission, children }: { permission: string, children: React.R
 
 export default function App() {
   const { usuario, token } = useAuthStore()
+  const setOnlineStatus = useOfflineStore(s => s.setOnlineStatus)
+
+  useEffect(() => {
+    const handleOnline = () => setOnlineStatus(true)
+    const handleOffline = () => setOnlineStatus(false)
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [setOnlineStatus])
 
   if (token && usuario?.debeCambiarPassword && usuario.rol !== 'SUPER_ADMIN') {
     return (
@@ -78,6 +90,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Toaster position="top-right" richColors closeButton />
+        <PWAInstallPrompt />
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
