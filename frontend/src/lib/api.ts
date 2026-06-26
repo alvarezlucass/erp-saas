@@ -406,32 +406,68 @@ export const insumosApi = {
 }
 
 export const proveedoresApi = {
-  listar: (): Promise<Proveedor[]> => api.get<Proveedor[]>('/proveedores').then(r => r.data),
-  crear:  (data: Partial<Proveedor>): Promise<Proveedor> => api.post('/proveedores', data).then(r => r.data),
-  editar: (id: string, data: Partial<Proveedor>): Promise<Proveedor> => api.patch(`/proveedores/${id}`, data).then(r => r.data),
-  baja:   (id: string): Promise<any> => api.delete(`/proveedores/${id}`).then(r => r.data),
+  listar: async (): Promise<Proveedor[]> => {
+    const { data, error } = await supabase.from('proveedores').select('*');
+    if (error) throw error;
+    return data as Proveedor[];
+  },
+  crear: async (data: Partial<Proveedor>): Promise<Proveedor> => {
+    const { data: result, error } = await supabase.from('proveedores').insert([data]).select().single();
+    if (error) throw error;
+    return result as Proveedor;
+  },
+  editar: async (id: string, data: Partial<Proveedor>): Promise<Proveedor> => {
+    const { data: result, error } = await supabase.from('proveedores').update(data).eq('id', id).select().single();
+    if (error) throw error;
+    return result as Proveedor;
+  },
+  baja: async (id: string): Promise<any> => {
+    const { error } = await supabase.from('proveedores').delete().eq('id', id);
+    if (error) throw error;
+    return { success: true };
+  },
 }
 
 export const productosApi = {
-  listar: (filtros?: { categoriaId?: string; buscar?: string }): Promise<Producto[]> => 
-    api.get<Producto[]>('/productos', { params: filtros }).then(r => r.data),
-  obtener: (id: string): Promise<Producto> => 
-    api.get<Producto>(`/productos/${id}`).then(r => r.data),
-  crear: (data: any): Promise<Producto> => 
-    api.post<Producto>('/productos', data).then(r => r.data),
-  editar: (id: string, data: any): Promise<Producto> => 
-    api.patch<Producto>(`/productos/${id}`, data).then(r => r.data),
-  eliminar: (id: string, hard?: boolean): Promise<any> => 
-    api.delete(`/productos/${id}${hard ? '?hard=true' : ''}`).then(r => r.data),
-  subirImagen: (file: File): Promise<{url: string}> => {
-    const formData = new FormData()
-    formData.append('image', file)
-    return api.post('/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    }).then(r => r.data)
+  listar: async (filtros?: { categoriaId?: string; buscar?: string }): Promise<Producto[]> => {
+    let query = supabase.from('productos').select('*, categoria:categorias(*)').order('creadoEn', { ascending: false });
+    if (filtros?.categoriaId) query = query.eq('categoriaId', filtros.categoriaId);
+    if (filtros?.buscar) query = query.ilike('nombre', `%${filtros.buscar}%`);
+    const { data, error } = await query;
+    if (error) throw error;
+    return data as Producto[];
   },
-  actualizarMasivo: (data: { porcentaje: number; categoriaId?: string; institucionId?: string; temporada?: string; motivo?: string }): Promise<{actualizados: number}> => 
-    api.post('/productos/actualizar-masivo', data).then(r => r.data),
+  obtener: async (id: string): Promise<Producto> => {
+    const { data, error } = await supabase.from('productos').select('*, categoria:categorias(*), insumos:insumo_producto(*), talles:producto_talle(*)').eq('id', id).single();
+    if (error) throw error;
+    return data as Producto;
+  },
+  crear: async (data: any): Promise<Producto> => {
+    const { data: result, error } = await supabase.from('productos').insert([data]).select().single();
+    if (error) throw error;
+    return result as Producto;
+  },
+  editar: async (id: string, data: any): Promise<Producto> => {
+    const { data: result, error } = await supabase.from('productos').update(data).eq('id', id).select().single();
+    if (error) throw error;
+    return result as Producto;
+  },
+  eliminar: async (id: string, hard?: boolean): Promise<any> => {
+    const { error } = await supabase.from('productos').delete().eq('id', id);
+    if (error) throw error;
+    return { success: true };
+  },
+  subirImagen: async (file: File): Promise<{url: string}> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const { data, error } = await supabase.storage.from('productos-imagenes').upload(fileName, file);
+    if (error) throw error;
+    const { data: { publicUrl } } = supabase.storage.from('productos-imagenes').getPublicUrl(fileName);
+    return { url: publicUrl };
+  },
+  actualizarMasivo: async (data: { porcentaje: number; categoriaId?: string; institucionId?: string; temporada?: string; motivo?: string }): Promise<{actualizados: number}> => {
+    throw new Error("Migrando a Edge Functions. Temporalmente no disponible.");
+  },
 }
 
 export const categoriasApi = {
@@ -524,13 +560,29 @@ export interface Presupuesto {
 }
 
 export const presupuestosApi = {
-  listar:  (): Promise<Presupuesto[]> => api.get('/presupuestos').then(r => r.data),
-  obtener: (id: string): Promise<Presupuesto> => api.get(`/presupuestos/${id}`).then(r => r.data),
-  crear:   (data: any): Promise<Presupuesto> => api.post('/presupuestos', data).then(r => r.data),
-  estado:  (id: string, estado: string): Promise<any> =>
-    api.patch(`/presupuestos/${id}/estado`, { estado }).then(r => r.data),
-  cobrar:  (id: string, data: any): Promise<Presupuesto> =>
-    api.post(`/presupuestos/${id}/cobrar`, data).then(r => r.data),
+  listar: async (): Promise<Presupuesto[]> => {
+    const { data, error } = await supabase.from('presupuestos').select('*, lineas:lineas_presupuesto(*)').order('creadoEn', { ascending: false });
+    if (error) throw error;
+    return data as Presupuesto[];
+  },
+  obtener: async (id: string): Promise<Presupuesto> => {
+    const { data, error } = await supabase.from('presupuestos').select('*, lineas:lineas_presupuesto(*)').eq('id', id).single();
+    if (error) throw error;
+    return data as Presupuesto;
+  },
+  crear: async (data: any): Promise<Presupuesto> => {
+    const { data: result, error } = await supabase.from('presupuestos').insert([data]).select().single();
+    if (error) throw error;
+    return result as Presupuesto;
+  },
+  estado: async (id: string, estado: string): Promise<any> => {
+    const { data: result, error } = await supabase.from('presupuestos').update({ estado }).eq('id', id).select().single();
+    if (error) throw error;
+    return result;
+  },
+  cobrar: async (id: string, data: any): Promise<Presupuesto> => {
+    throw new Error("Migrando a Edge Functions. Temporalmente no disponible.");
+  },
 }
 
 export const finanzasApi = {
@@ -592,10 +644,26 @@ export interface Cliente {
 }
 
 export const clientesApi = {
-  listar: (): Promise<Cliente[]> => api.get('/clientes').then(r => r.data),
-  crear: (data: Partial<Cliente>): Promise<Cliente> => api.post('/clientes', data).then(r => r.data),
-  editar: (id: string, data: Partial<Cliente>): Promise<Cliente> => api.patch(`/clientes/${id}`, data).then(r => r.data),
-  eliminar: (id: string): Promise<any> => api.delete(`/clientes/${id}`).then(r => r.data),
+  listar: async (): Promise<Cliente[]> => {
+    const { data, error } = await supabase.from('clientes').select('*');
+    if (error) throw error;
+    return data as Cliente[];
+  },
+  crear: async (data: Partial<Cliente>): Promise<Cliente> => {
+    const { data: result, error } = await supabase.from('clientes').insert([data]).select().single();
+    if (error) throw error;
+    return result as Cliente;
+  },
+  editar: async (id: string, data: Partial<Cliente>): Promise<Cliente> => {
+    const { data: result, error } = await supabase.from('clientes').update(data).eq('id', id).select().single();
+    if (error) throw error;
+    return result as Cliente;
+  },
+  eliminar: async (id: string): Promise<any> => {
+    const { error } = await supabase.from('clientes').delete().eq('id', id);
+    if (error) throw error;
+    return { success: true };
+  },
 }
 
 export interface Institucion {
