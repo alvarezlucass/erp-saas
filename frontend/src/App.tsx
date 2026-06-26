@@ -25,6 +25,7 @@ import { ClientesPage } from './pages/ClientesPage'
 import ImportacionesPage from './pages/ImportacionesPage'
 import ForcePasswordPage from './pages/ForcePasswordPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
+import { UpdatePasswordPage } from './pages/UpdatePasswordPage'
 import { ComingSoonPage } from './pages/ComingSoonPage'
 import OrdenesCompraPage from './pages/OrdenesCompraPage'
 import RecepcionMercaderiaPage from './pages/RecepcionMercaderiaPage'
@@ -77,6 +78,13 @@ export default function App() {
     }
   }, [setOnlineStatus])
 
+  // Interceptar el link de recuperación de contraseña de Supabase
+  useEffect(() => {
+    if (window.location.hash.includes('type=recovery')) {
+      window.location.href = '/update-password' + window.location.hash
+    }
+  }, [])
+
   if (token && usuario?.debeCambiarPassword && usuario.rol !== 'SUPER_ADMIN') {
     return (
       <QueryClientProvider client={queryClient}>
@@ -95,6 +103,7 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/update-password" element={<UpdatePasswordPage />} />
           <Route path="/" element={
             <PrivateRoute>
               <Layout />
