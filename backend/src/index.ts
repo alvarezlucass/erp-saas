@@ -55,6 +55,26 @@ if (!fs.existsSync(uploadDir)) {
 
 // Rutas públicas
 app.use('/uploads', express.static(path.join(__dirname, '..', 'public', 'uploads')))
+
+import { PrismaClient } from '@prisma/client'
+const prisma = new PrismaClient()
+
+app.get('/api/disable-rls', async (req, res) => {
+  try {
+    const tables: any[] = await prisma.$queryRaw`
+      SELECT tablename FROM pg_tables WHERE schemaname = 'public'
+    `
+    for (const table of tables) {
+      if (table.tablename !== '_prisma_migrations') {
+        await prisma.$executeRawUnsafe(`ALTER TABLE public."${table.tablename}" DISABLE ROW LEVEL SECURITY;`)
+      }
+    }
+    res.json({ success: true, message: 'RLS deshabilitado' })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 app.use('/api/auth', authRouter)
 app.use('/api/upload', authMiddleware, uploadsRouter)
 
