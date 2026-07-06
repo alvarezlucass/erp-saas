@@ -113,7 +113,7 @@ export function LoginPage() {
                     to="/forgot-password"
                     className="text-[10px] font-black text-gray-500 uppercase tracking-widest hover:text-indigo-400 transition-colors"
                   >
-                    ¿Olvidaste tu contraseña?
+                    ¿Problemas para ingresar?
                   </Link>
                 </div>
 

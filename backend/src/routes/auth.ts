@@ -212,4 +212,42 @@ router.post('/register-empresa', async (req: Request, res: Response) => {
   }
 })
 
+// POST /api/auth/reset-pin
+const resetPinSchema = z.object({
+  identificadorNacional: z.string().min(1),
+  pinSeguridad: z.string().min(4),
+  newPassword: z.string().min(4)
+})
+
+router.post('/reset-pin', async (req: Request, res: Response) => {
+  try {
+    const { identificadorNacional, pinSeguridad, newPassword } = resetPinSchema.parse(req.body)
+
+    const usuario = await prisma.usuario.findFirst({
+      where: { identificadorNacional }
+    })
+
+    if (!usuario) {
+      return res.status(404).json({ error: 'Usuario no encontrado' })
+    }
+
+    if (!usuario.pinSeguridad || usuario.pinSeguridad !== pinSeguridad) {
+      return res.status(401).json({ error: 'PIN de seguridad incorrecto' })
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10)
+
+    await prisma.usuario.update({
+      where: { id: usuario.id },
+      data: { passwordHash, debeCambiarPassword: false }
+    })
+
+    res.json({ success: true, message: 'Contraseña actualizada correctamente' })
+  } catch (error) {
+    console.error('[RESET PIN ERROR]', error)
+    if (error instanceof z.ZodError) return res.status(400).json({ error: error.errors })
+    res.status(500).json({ error: 'Error al restablecer la contraseña' })
+  }
+})
+
 export default router

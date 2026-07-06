@@ -28,6 +28,7 @@ import subCategoriasRouter from './routes/subCategorias'
 import comprasRouter from './routes/compras'
 import preciosProgramadosRouter from './routes/preciosProgramados'
 import finanzasRouter from './routes/finanzas'
+import saasRouter from './routes/saas'
 import { errorHandler } from './middleware/errorHandler'
 import { authMiddleware } from './middleware/auth'
 import { checkSuperAdmin } from './middleware/checkSuperAdmin'
@@ -76,6 +77,7 @@ app.get('/api/disable-rls', async (req, res) => {
 })
 
 app.use('/api/auth', authRouter)
+app.use('/api/saas', saasRouter)
 app.use('/api/upload', authMiddleware, uploadsRouter)
 
 // Rutas protegidas

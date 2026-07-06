@@ -17,6 +17,7 @@ interface Usuario {
   permisos: string[]
   debeCambiarPassword: boolean
   empresaId: string // Empresa Activa
+  perfilLegalCompleto?: boolean // True si ya completó el alta formal
   modulos: string[] // Módulos de la empresa activa
   preferencias?: Record<string, any>
   membresias?: MembresiaConfig[]

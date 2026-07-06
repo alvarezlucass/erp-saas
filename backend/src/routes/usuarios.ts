@@ -15,6 +15,7 @@ const usuarioSchema = z.object({
   email:                 z.string().email().or(z.literal('')).optional().nullable(),
   identificadorNacional: z.string().min(1, 'El DNI es obligatorio'),
   password:              z.string().min(4).optional(), // PIN o contraseña corta
+  pinSeguridad:          z.string().min(4, 'El PIN debe tener al menos 4 dígitos').max(6).optional(),
   rol:                   z.enum(['ADMIN', 'OPERADOR', 'LECTOR']).optional(),
   tarifaVenta:           z.enum(['PRECIO_FINAL', 'PRECIO_REVENDEDOR', 'PRECIO_EMPRESA', 'PRECIO_REVENDIDO', 'TODAS']).optional(),
   permisos:              z.array(z.string()).optional(),
@@ -114,6 +115,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
           nombre:                data.nombre,
           email:                 normalizedEmail,
           identificadorNacional: data.identificadorNacional,
+          pinSeguridad:          data.pinSeguridad,
           passwordHash,
           debeCambiarPassword:   true
         }
@@ -182,6 +184,10 @@ router.patch('/:id', async (req: AuthRequest, res: Response) => {
        nombre: data.nombre,
        email: normalizedEmail,
        identificadorNacional: data.identificadorNacional
+    }
+
+    if (data.pinSeguridad) {
+       updateUsuario.pinSeguridad = data.pinSeguridad
     }
 
     if (data.password && data.password.trim() !== '') {

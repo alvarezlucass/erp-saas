@@ -691,84 +691,119 @@ export const subCategoriasApi = {
     api.delete(`/sub-categorias/${id}`).then(r => r.data),
 }
 
+export const saasApi = {
+  getPlanes: (): Promise<any[]> => api.get('/saas/planes').then(r => r.data),
+  updatePlanes: (data: any[]): Promise<any> => api.post('/saas/planes', data).then(r => r.data),
+}
+
 export const configuracionApi = {
   get: (): Promise<Record<string, string>> => api.get('/configuracion').then(r => r.data),
   update: (data: Record<string, string>): Promise<any> => api.post('/configuracion', data).then(r => r.data),
 }
 
+// ─── HELPER DE TRADUCCIÓN DE ERRORES ──────────────────────────────────────────
+export function translateSupabaseError(error: any): string {
+  if (!error) return 'Ocurrió un error inesperado.'
+  const msg = error.message || error.error_description || ''
+  
+  if (msg.includes('Invalid login credentials')) return 'Usuario o contraseña incorrectos.'
+  if (msg.includes('Email not confirmed')) return 'Debes verificar tu correo antes de ingresar.'
+  if (msg.includes('User already registered')) return 'Este correo ya está registrado.'
+  if (msg.includes('Password should be at least')) return 'La contraseña es demasiado corta.'
+  
+  return msg
+}
+
 export const authApi = {
   login: async (emailOrDni: string, password: string) => {
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: emailOrDni,
-      password,
-    })
-    if (authError) throw authError
+    // Si contiene '@', usamos el flujo de Admin (Supabase Auth)
+    if (emailOrDni.includes('@')) {
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: emailOrDni,
+        password,
+      })
+      if (authError) throw new Error(translateSupabaseError(authError))
 
-    const { data: userData, error: userError } = await supabase
-      .from('usuarios')
-      .select('*, membresias(*, empresa:empresas(*))')
-      .eq('id', authData.user.id)
-      .single()
-    
-    if (userError) throw userError
+      const { data: userData, error: userError } = await supabase
+        .from('usuarios')
+        .select('*, membresias(*, empresa:empresas(*))')
+        .eq('id', authData.user.id)
+        .single()
+      
+      if (userError) throw userError
 
-    // Parse data to match expected structure
-    const usuario = {
-      ...userData,
-      empresaId: userData.membresias?.[0]?.empresaId || '',
-      rol: userData.membresias?.[0]?.rol || 'OPERADOR',
-      permisos: userData.membresias?.[0]?.permisos || [],
-      modulos: userData.membresias?.[0]?.empresa?.modulos || [],
-      membresias: userData.membresias?.map((m: any) => ({
-        empresaId: m.empresaId,
-        empresaNombre: m.empresa.nombre,
-        rol: m.rol,
-        preferencias: m.preferencias,
-      }))
+      const empresaId = userData.membresias?.[0]?.empresaId || ''
+      let perfilLegalCompleto = false
+
+      if (empresaId) {
+        // Verificar si la empresa completó el perfil legal
+        const { data: configData } = await supabase
+          .from('configuracion')
+          .select('valor')
+          .eq('empresaId', empresaId)
+          .eq('clave', 'PERFIL_LEGAL_COMPLETO')
+          .maybeSingle()
+        
+        if (configData?.valor === 'true') {
+          perfilLegalCompleto = true
+        }
+      }
+
+      const usuario = {
+        ...userData,
+        empresaId,
+        perfilLegalCompleto,
+        rol: userData.membresias?.[0]?.rol || 'OPERADOR',
+        permisos: userData.membresias?.[0]?.permisos || [],
+        modulos: userData.membresias?.[0]?.empresa?.modulos || [],
+        membresias: userData.membresias?.map((m: any) => ({
+          empresaId: m.empresaId,
+          empresaNombre: m.empresa.nombre,
+          rol: m.rol,
+          preferencias: m.preferencias,
+        }))
+      }
+
+      return { token: authData.session.access_token, usuario }
+    } else {
+      // Si no contiene '@', es un DNI. Usamos el backend de autenticación personalizado
+      const { data } = await api.post('/auth/login', { email: emailOrDni, password })
+      return { token: data.token, usuario: data.usuario }
     }
-
-    return { token: authData.session.access_token, usuario }
   },
   registrarEmpresa: async (data: any) => {
     // 1. Sign up user in Supabase Auth
+    // 1. Crear el usuario en Supabase Auth y pasar todos los datos para que el Trigger haga el resto
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
       options: {
-        data: { nombre: data.nombreDueño }
+        data: { 
+          nombre: data.nombreDueño,
+          nombreEmpresa: data.nombreEmpresa,
+          cuit: data.cuit,
+          modulos: data.modulos
+        }
       }
     });
-    if (authError) throw authError;
+    if (authError) throw new Error(translateSupabaseError(authError));
     if (!authData.user) throw new Error("Error creando usuario en Auth");
 
-    // Esperar un segundo para asegurar que el Trigger de base de datos haya creado el registro en public.usuarios
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // NOTA: No hacemos insert en 'usuarios', 'empresas' ni 'membresias' manualmente.
+    // El trigger en la base de datos de Supabase se encarga de crear todo esto
+    // automáticamente y con permisos de administrador (bypasseando RLS).
 
-    // 2. Crear la Empresa
-    const { data: empresa, error: empError } = await supabase.from('empresas').insert([{
-      nombre: data.nombreEmpresa,
-      razonSocial: data.nombreEmpresa,
-      cuit: data.cuit,
-      modulos: data.modulos,
-      activa: true
-    }]).select().single();
-    if (empError) throw empError;
+    // Si el registro requiere confirmación de email, Supabase no devuelve sesión
+    if (!authData.session) {
+      return { requireEmailVerification: true };
+    }
 
-    // 3. Crear Membresia SUPER_ADMIN
-    const { error: memError } = await supabase.from('membresias').insert([{
-      usuarioId: authData.user.id,
-      empresaId: empresa.id,
-      rol: 'SUPER_ADMIN',
-      permisos: ['TODO']
-    }]);
-    if (memError) throw memError;
-
-    // Login manual con el usuario creado
+    // Login manual con el usuario creado (solo si no requirió confirmación)
     const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
       email: data.email,
       password: data.password,
     });
-    if (loginError) throw loginError;
+    if (loginError) throw new Error(translateSupabaseError(loginError));
 
     const { data: userData, error: userError } = await supabase
       .from('usuarios')
@@ -779,7 +814,8 @@ export const authApi = {
 
     const usuario = {
       ...userData,
-      empresaId: empresa.id,
+      empresaId: userData.membresias?.[0]?.empresaId,
+      perfilLegalCompleto: false, // Es un registro nuevo
       rol: 'SUPER_ADMIN',
       permisos: ['TODO'],
       modulos: data.modulos,
@@ -792,6 +828,26 @@ export const authApi = {
     };
 
     return { token: loginData.session.access_token, usuario };
+  },
+  resetPin: async (identificadorNacional: string, pinSeguridad: string, newPassword: string) => {
+    // Usamos bcryptjs dinámicamente
+    const bcrypt = await import('bcryptjs')
+    const passwordHash = bcrypt.hashSync(newPassword, 10)
+    
+    // Llamamos a una función segura (RPC) en Supabase para saltarnos el bloqueo RLS
+    const { error } = await supabase.rpc('reset_password_with_pin', {
+      p_dni: identificadorNacional,
+      p_pin: pinSeguridad,
+      p_new_password_hash: passwordHash
+    })
+
+    if (error) {
+      if (error.message.includes('Usuario no encontrado')) throw new Error('Usuario no encontrado')
+      if (error.message.includes('PIN de seguridad incorrecto')) throw new Error('PIN de seguridad incorrecto')
+      throw new Error('Error al actualizar la contraseña')
+    }
+    
+    return { success: true }
   },
 }
 

@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Menu, X, LogOut, LayoutGrid, Building2, ShoppingCart, Factory, Star, Wallet, Users, BarChart3, Settings,
   Tag, FileText, DollarSign, Layers, CheckSquare, RefreshCw, Truck, Archive, Play, ArrowLeftRight, Receipt, Activity,
-  LineChart, Clock, Folder, Calculator, UserCheck, History, ChevronLeft, ChevronRight, Palette, PiggyBank
+  LineChart, Clock, Folder, Calculator, UserCheck, History, ChevronLeft, ChevronRight, Palette, PiggyBank, Crown
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { empresaApi } from '../lib/api'
@@ -107,6 +107,13 @@ const MENU_GROUPS: { title: string; icon: any; items: MenuItem[] }[] = [
       { to: '/admin',                label: 'Administración Global', color: 'bg-gray-400', permiso: 'SISTEMAS_GLOBAL', icon: Settings },
       { to: '/admin/importaciones',  label: 'Carga masiva de datos', color: 'bg-teal-500', permiso: 'SISTEMAS_IMPORTACION', icon: Settings },
       { to: '/admin/roles',          label: 'Roles y Permisos Avanzados', color: 'bg-rose-500', permiso: 'SISTEMAS_AVANZADO', icon: Settings },
+    ]
+  },
+  {
+    title: 'Super Admin',
+    icon: Crown,
+    items: [
+      { to: '/super-admin', label: 'Control Master SaaS', color: 'bg-purple-600', rol: 'SUPER_ADMIN', icon: Crown },
     ]
   },
   {

@@ -105,6 +105,7 @@ model Usuario {
   creadoEn     DateTime @default(now())
   
   identificadorNacional String? @unique // DNI / CUIT / RUT (Oculto inicial, único)
+  pinSeguridad          String? // PIN de 4-6 dígitos para recuperar contraseña
 
   membresias      Membresia[]
   auditoriasCancelacion AuditoriaCancelacion[]
@@ -978,4 +979,20 @@ model EtapaPedido {
   usuario Usuario? @relation(fields: [usuarioId], references: [id])
 
   @@map("etapas_pedido")
+}
+
+
+// ─── SAAS PACKAGING ──────────────────────────────────────────────────────────
+
+model SaasPlan {
+  id                 String   @id // ESENCIAL, PROFESIONAL, ESCALA, TOTAL
+  nombre             String
+  precioMensual      Float
+  usuariosBase       Int
+  precioUsuarioExtra Float
+  tiempoRespuesta    String
+  modulos            String[] 
+  orden              Int      @default(0)
+  
+  @@map("saas_planes")
 }

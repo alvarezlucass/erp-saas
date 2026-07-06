@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { authApi } from '../lib/api'
+import { authApi, saasApi } from '../lib/api'
+import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '../store/authStore'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
@@ -8,30 +9,15 @@ import {
   ArrowRight, ArrowLeft, Sparkles, AlertTriangle, Eye, EyeOff, ShieldCheck
 } from 'lucide-react'
 
-const PRECIOS: Record<string, { nombre: string; descripcion: string; precio: number }> = {
-  COMERCIAL: { 
-    nombre: 'Ventas & POS', 
-    descripcion: 'Punto de venta, control de caja, presupuestos y gestión de clientes.',
-    precio: 15000 
-  },
-  INVENTARIO: { 
-    nombre: 'Inventario', 
-    descripcion: 'Control de stock de materias primas, insumos, productos terminados y compras.',
-    precio: 10000 
-  },
-  PRODUCCION: { 
-    nombre: 'Producción Avanzada', 
-    descripcion: 'Etapas de taller, órdenes de producción, planificación de confección y bordados.',
-    precio: 25000 
-  },
-  FINANZAS: { 
-    nombre: 'Finanzas Completas', 
-    descripcion: 'Bancos, cuentas corrientes, conciliaciones, cashflow y sueldos.',
-    precio: 20000 
-  }
-}
-
 export function RegisterPage() {
+
+  const { data: planesData = [], isLoading: loadingPlanes } = useQuery({
+    queryKey: ['saasPlanes'],
+    queryFn: saasApi.getPlanes
+  })
+  
+  const selectedPlanData = planesData.find((p: any) => p.id === selectedPlan) || planesData[1] || planesData[0] || {}
+
   const [step, setStep] = useState(1)
   const [nombreDueño, setNombreDueño] = useState('')
   const [email, setEmail] = useState('')
@@ -41,7 +27,7 @@ export function RegisterPage() {
   const [nombreEmpresa, setNombreEmpresa] = useState('')
   const [cuit, setCuit] = useState('')
 
-  const [selectedModules, setSelectedModules] = useState<string[]>(['COMERCIAL']) // Comercial por defecto
+  const [selectedPlan, setSelectedPlan] = useState<string>('PROFESIONAL')
   const [terminosAceptados, setTerminosAceptados] = useState(false)
 
   const [error, setError] = useState('')
@@ -50,21 +36,14 @@ export function RegisterPage() {
   const { setAuth } = useAuthStore()
   const navigate = useNavigate()
 
-  const handleToggleModule = (key: string) => {
-    if (selectedModules.includes(key)) {
-      if (selectedModules.length > 1) {
-        setSelectedModules(selectedModules.filter(m => m !== key))
-      }
-    } else {
-      setSelectedModules([...selectedModules, key])
-    }
-  }
-
   // Cálculos dinámicos de abono
-  const precioListaTotal = selectedModules.reduce((sum, key) => sum + (PRECIOS[key]?.precio || 0), 0)
+  const precioListaTotal = selectedPlanData?.precioMensual || 0
   
   // Próximas escalas calculadas para el UI
+  const precioEscala70 = Math.round(precioListaTotal * 0.3)
   const precioEscala50 = Math.round(precioListaTotal * 0.5)
+  const precioEscala35 = Math.round(precioListaTotal * 0.65)
+  const precioEscala20 = Math.round(precioListaTotal * 0.8)
   const precioEscala90 = precioListaTotal
 
   const validateStep1 = () => {
@@ -121,16 +100,22 @@ export function RegisterPage() {
         password,
         nombreEmpresa,
         cuit: cuit.replace(/\D/g, ''), // Mandar limpio de guiones
-        modulos: selectedModules,
+        modulos: selectedPlanData?.modulos || ['COMERCIAL'],
         terminosAceptados
       }
       
       const data = await authApi.registrarEmpresa(payload)
-      setAuth(data.token, data.usuario)
+      
+      if (data.requireEmailVerification) {
+        setStep(4) // Move to success step
+        return
+      }
+
+      setAuth(data.token!, data.usuario)
       navigate('/')
     } catch (err: any) {
       console.error(err)
-      setError(err.response?.data?.error || 'Error al procesar el alta de la empresa. Verifica los datos e intenta nuevamente.')
+      setError(err.response?.data?.error || err.message || 'Error al procesar el alta de la empresa. Verifica los datos e intenta nuevamente.')
     } finally {
       setLoading(false)
     }
@@ -157,29 +142,31 @@ export function RegisterPage() {
         </div>
 
         {/* Step Indicator */}
-        <div className="max-w-md mx-auto mb-8 flex items-center justify-between relative px-2">
-          <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[2px] bg-white/10 -z-10" />
-          {[1, 2, 3].map((num) => (
-            <div key={num} className="flex flex-col items-center">
-              <div 
-                className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm transition-all duration-300 ${
-                  step === num 
-                    ? 'bg-indigo-600 text-white ring-4 ring-indigo-600/30 scale-110' 
-                    : step > num 
-                      ? 'bg-emerald-500 text-white' 
-                      : 'bg-[#151515] border border-white/10 text-gray-500'
-                }`}
-              >
-                {step > num ? <CheckCircle2 size={18} /> : num}
+        {step < 4 && (
+          <div className="max-w-md mx-auto mb-8 flex items-center justify-between relative px-2">
+            <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[2px] bg-white/10 -z-10" />
+            {[1, 2, 3].map((num) => (
+              <div key={num} className="flex flex-col items-center">
+                <div 
+                  className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm transition-all duration-300 ${
+                    step === num 
+                      ? 'bg-indigo-600 text-white ring-4 ring-indigo-600/30 scale-110' 
+                      : step > num 
+                        ? 'bg-emerald-500 text-white' 
+                        : 'bg-[#151515] border border-white/10 text-gray-500'
+                  }`}
+                >
+                  {step > num ? <CheckCircle2 size={18} /> : num}
+                </div>
+                <span className={`text-[9px] font-bold uppercase tracking-widest mt-2 transition-colors ${
+                  step === num ? 'text-indigo-400' : 'text-gray-600'
+                }`}>
+                  {num === 1 ? 'Dueño' : num === 2 ? 'Empresa' : 'Módulos'}
+                </span>
               </div>
-              <span className={`text-[9px] font-bold uppercase tracking-widest mt-2 transition-colors ${
-                step === num ? 'text-indigo-400' : 'text-gray-600'
-              }`}>
-                {num === 1 ? 'Dueño' : num === 2 ? 'Empresa' : 'Módulos'}
-              </span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Content Box */}
         <div className="bg-white/5 backdrop-blur-2xl rounded-[3rem] border border-white/10 shadow-2xl overflow-hidden">
@@ -194,7 +181,7 @@ export function RegisterPage() {
                   className="space-y-6"
                 >
                   <div className="border-b border-white/10 pb-4 mb-6">
-                    <h2 className="text-xl font-black text-white">Datos de Cuenta (Super Admin)</h2>
+                    <h2 className="text-xl font-black text-white">Datos de Cuenta (Administrador)</h2>
                     <p className="text-xs font-semibold text-gray-500 mt-1">
                       Esta cuenta será el administrador principal (Dueño) de la plataforma. Podrás crear otros usuarios luego.
                     </p>
@@ -320,37 +307,49 @@ export function RegisterPage() {
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {Object.entries(PRECIOS).map(([key, item]) => {
-                      const active = selectedModules.includes(key)
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {planesData.map((item: any) => {
+                      const key = item.id
+                      const active = selectedPlan === key
                       return (
                         <div 
                           key={key}
-                          onClick={() => handleToggleModule(key)}
-                          className={`p-6 rounded-[2rem] border transition-all cursor-pointer flex flex-col justify-between ${
+                          onClick={() => setSelectedPlan(key)}
+                          className={`p-6 rounded-[2rem] border transition-all cursor-pointer flex flex-col relative ${
                             active 
                               ? 'bg-indigo-600/10 border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.15)]' 
                               : 'bg-white/5 border-white/10 hover:border-white/20'
                           }`}
                         >
-                          <div>
+                          {key === 'PROFESIONAL' && (
+                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-500 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full">
+                              Más elegido
+                            </div>
+                          )}
+                          <div className="mb-4">
                             <div className="flex justify-between items-start mb-2">
-                              <h3 className="font-black text-white text-base">{item.nombre}</h3>
+                              <h3 className="font-black text-white text-xl">{item.nombre}</h3>
                               <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
                                 active ? 'bg-indigo-600 border-indigo-500 text-white' : 'border-white/20'
                               }`}>
                                 {active && <CheckCircle2 size={14} className="fill-white text-indigo-600" />}
                               </div>
                             </div>
-                            <p className="text-xs text-gray-400 font-semibold mb-4 leading-relaxed">
-                              {item.descripcion}
-                            </p>
-                          </div>
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-white font-black text-lg">
-                              ${item.precio.toLocaleString('es-AR')}
-                            </span>
-                            <span className="text-[10px] text-gray-500 font-black uppercase tracking-wider">/ mes</span>
+                            <div className="flex items-baseline gap-1 mb-1">
+                              <span className="text-indigo-400 font-black text-2xl">
+                                ${item.precioMensual}
+                              </span>
+                              <span className="text-[10px] text-gray-500 font-black uppercase tracking-wider">USD/mes</span>
+                            </div>
+                            <p className="text-[10px] text-gray-400 font-bold mb-6">Hasta {item.usuariosBase} usuarios · {item.tiempoRespuesta}</p>
+                            <div className="space-y-3">
+                              {(item.modulos || []).slice(0,5).map((carac: string, i: number) => (
+                                <div key={i} className="flex items-start gap-2 text-xs font-semibold text-gray-300">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 shrink-0" />
+                                  <span>{carac}</span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       )
@@ -384,23 +383,28 @@ export function RegisterPage() {
                       </div>
                       <div className="space-y-1">
                         <p className="text-indigo-300 font-black">Día 91 a 180</p>
+                        <p className="text-white font-black">70% OFF</p>
+                        <p className="text-[8px] text-gray-400">${precioEscala70.toLocaleString('es-AR')} USD</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-indigo-400 font-black">Día 181 a 225</p>
                         <p className="text-white font-black">50% OFF</p>
-                        <p className="text-[8px] text-gray-400">${precioEscala50.toLocaleString('es-AR')}</p>
+                        <p className="text-[8px] text-gray-400">${precioEscala50.toLocaleString('es-AR')} USD</p>
                       </div>
                       <div className="space-y-1">
-                        <p className="text-indigo-400 font-black">Día 181 a 270</p>
-                        <p className="text-white font-black">40% - 30%</p>
-                        <p className="text-[8px] text-gray-400">Escala gradual</p>
+                        <p className="text-indigo-500 font-black">Día 226 a 270</p>
+                        <p className="text-white font-black">35% OFF</p>
+                        <p className="text-[8px] text-gray-400">${precioEscala35.toLocaleString('es-AR')} USD</p>
                       </div>
                       <div className="space-y-1">
-                        <p className="text-indigo-500 font-black">Día 271 a 360</p>
-                        <p className="text-white font-black">20% - 10%</p>
-                        <p className="text-[8px] text-gray-400">Escala gradual</p>
+                        <p className="text-indigo-600 font-black">Día 271 a 315</p>
+                        <p className="text-white font-black">20% OFF</p>
+                        <p className="text-[8px] text-gray-400">${precioEscala20.toLocaleString('es-AR')} USD</p>
                       </div>
-                      <div className="space-y-1 col-span-2 md:col-span-2">
-                        <p className="text-gray-400 font-black">Día 361+</p>
-                        <p className="text-white font-black">Sin Descuento</p>
-                        <p className="text-[8px] text-gray-400">${precioEscala90.toLocaleString('es-AR')}</p>
+                      <div className="space-y-1">
+                        <p className="text-gray-400 font-black">Día 316+</p>
+                        <p className="text-white font-black">Precio full</p>
+                        <p className="text-[8px] text-gray-400">${precioEscala90.toLocaleString('es-AR')} USD</p>
                       </div>
                     </div>
                   </div>
@@ -412,23 +416,27 @@ export function RegisterPage() {
                         Resumen del Pedido
                       </span>
                       <div className="mt-3 flex items-baseline gap-2">
-                        <span className="text-white/60 font-semibold text-xs line-through">
-                          ${precioListaTotal.toLocaleString('es-AR')}
-                        </span>
                         <span className="text-3xl font-black text-white">
                           $0
                         </span>
                         <span className="text-xs text-gray-400 font-bold">/ mes por 90 días</span>
+                        <span className="text-[10px] text-emerald-400 font-black uppercase tracking-widest bg-emerald-400/10 px-3 py-1 rounded-full">
+                          ¡Ahorras ${precioListaTotal} USD al mes!
+                        </span>
                       </div>
-                      <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mt-1">
-                        ¡Ahorras ${precioListaTotal.toLocaleString('es-AR')} al mes!
-                      </p>
+                      <div className="flex justify-between items-center text-xs font-semibold">
+                        <span className="text-gray-400">Plan elegido: <span className="text-white font-bold">{selectedPlanData?.nombre}</span></span>
+                        <div className="text-right">
+                          <span className="text-white/60 font-semibold text-xs line-through mr-2">${precioListaTotal} USD</span>
+                          <span className="text-white font-bold text-lg">$0 USD</span><span className="text-white/60 text-[10px]">/mes (90 días)</span>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="w-full md:w-auto text-left md:text-right space-y-1 border-t md:border-t-0 md:border-l border-white/10 pt-4 md:pt-0 md:pl-6 text-xs text-gray-400 font-semibold">
                       <p>Precio de lista total: <span className="text-white font-bold">${precioListaTotal.toLocaleString('es-AR')}</span></p>
                       <p>Descuento aplicado: <span className="text-emerald-400 font-bold">100% de descuento</span></p>
-                      <p>Módulos seleccionados: <span className="text-white font-bold">{selectedModules.length}</span></p>
+                      <p>Plan seleccionado: <span className="text-white font-bold">{selectedPlanData?.nombre}</span></p>
                     </div>
                   </div>
 
@@ -455,6 +463,38 @@ export function RegisterPage() {
                   </div>
                 </motion.div>
               )}
+
+              {step === 4 && (
+                <motion.div
+                  key="step4"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="text-center py-12"
+                >
+                  <div className="w-24 h-24 bg-emerald-500/20 border-2 border-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_50px_rgba(16,185,129,0.3)]">
+                    <Mail size={40} className="text-emerald-400 animate-pulse" />
+                  </div>
+                  <h2 className="text-3xl font-black text-white mb-4 tracking-tight">¡Bienvenido a Venzo ERP!</h2>
+                  <p className="text-gray-400 text-sm max-w-md mx-auto font-medium mb-8 leading-relaxed">
+                    Para continuar debes verificar tu cuenta de correo electrónico. Hemos enviado un mensaje a <span className="text-white font-bold">{email}</span>.
+                  </p>
+                  <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-left max-w-sm mx-auto mb-10">
+                    <div className="flex gap-3 text-amber-400/90 items-start mb-2">
+                      <AlertTriangle size={18} className="shrink-0 mt-0.5" />
+                      <p className="text-xs font-semibold">¿No encuentras el correo?</p>
+                    </div>
+                    <p className="text-[11px] text-gray-500 ml-7 leading-relaxed font-medium">
+                      Si no llega a tu bandeja de entrada en los próximos minutos, por favor revisa tu carpeta de <span className="text-gray-300 font-semibold">Spam o Correo no deseado</span>.
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => navigate('/login')}
+                    className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-8 py-4 rounded-full font-black uppercase text-xs tracking-widest transition-all"
+                  >
+                    Ir al Inicio de Sesión <ArrowRight size={16} />
+                  </button>
+                </motion.div>
+              )}
             </AnimatePresence>
 
             {/* Error Message */}
@@ -470,44 +510,46 @@ export function RegisterPage() {
             )}
 
             {/* Action Buttons */}
-            <div className="mt-10 pt-6 border-t border-white/10 flex items-center justify-between gap-4">
-              {step > 1 ? (
-                <button
-                  type="button"
-                  onClick={handleBack}
-                  disabled={loading}
-                  className="flex items-center gap-2 px-6 py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-black uppercase text-[10px] tracking-wider transition-all disabled:opacity-50"
-                >
-                  <ArrowLeft size={14} /> Volver
-                </button>
-              ) : (
-                <Link
-                  to="/login"
-                  className="text-[10px] font-black text-gray-500 hover:text-white uppercase tracking-widest transition-colors"
-                >
-                  ¿Ya tienes cuenta? Ingresa aquí
-                </Link>
-              )}
+            {step < 4 && (
+              <div className="mt-10 pt-6 border-t border-white/10 flex items-center justify-between gap-4">
+                {step > 1 ? (
+                  <button
+                    type="button"
+                    onClick={handleBack}
+                    disabled={loading}
+                    className="flex items-center gap-2 px-6 py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-black uppercase text-[10px] tracking-wider transition-all disabled:opacity-50"
+                  >
+                    <ArrowLeft size={14} /> Volver
+                  </button>
+                ) : (
+                  <Link
+                    to="/login"
+                    className="text-[10px] font-black text-gray-500 hover:text-white uppercase tracking-widest transition-colors"
+                  >
+                    ¿Ya tienes cuenta? Ingresa aquí
+                  </Link>
+                )}
 
-              {step < 3 ? (
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="flex items-center gap-2 px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase text-[10px] tracking-wider transition-all"
-                >
-                  Siguiente <ArrowRight size={14} />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={loading}
-                  className="flex items-center gap-2 px-8 py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-emerald-500/20 transition-all disabled:opacity-50"
-                >
-                  {loading ? 'Procesando alta...' : 'Finalizar Registro'} <CheckCircle2 size={14} />
-                </button>
-              )}
-            </div>
+                {step < 3 ? (
+                  <button
+                    type="button"
+                    onClick={handleNext}
+                    className="flex items-center gap-2 px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase text-[10px] tracking-wider transition-all"
+                  >
+                    Siguiente <ArrowRight size={14} />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={loading}
+                    className="flex items-center gap-2 px-8 py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-emerald-500/20 transition-all disabled:opacity-50"
+                  >
+                    {loading ? 'Procesando alta...' : 'Finalizar Registro'} <CheckCircle2 size={14} />
+                  </button>
+                )}
+              </div>
+            )}
 
           </div>
         </div>

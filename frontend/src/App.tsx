@@ -27,6 +27,8 @@ import ForcePasswordPage from './pages/ForcePasswordPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { UpdatePasswordPage } from './pages/UpdatePasswordPage'
 import { ComingSoonPage } from './pages/ComingSoonPage'
+import { RecoverWithPinPage } from './pages/RecoverWithPinPage'
+import { OnboardingLegalPage } from './pages/OnboardingLegalPage'
 import OrdenesCompraPage from './pages/OrdenesCompraPage'
 import RecepcionMercaderiaPage from './pages/RecepcionMercaderiaPage'
 import PreciosProgramadosPage from './pages/PreciosProgramadosPage'
@@ -34,6 +36,7 @@ import CuentaCorrientePage from './pages/CuentaCorrientePage'
 import { Toaster, toast } from 'sonner'
 import { useAuthStore } from './store/authStore'
 import { PWAInstallPrompt } from './components/PWAInstallPrompt'
+import { ReloadPrompt } from './components/ReloadPrompt'
 import { queryClient } from './lib/queryClient'
 import { useOfflineStore } from './store/offlineStore'
 import { useEffect } from 'react'
@@ -94,16 +97,32 @@ export default function App() {
     )
   }
 
+  if (token && usuario && usuario.perfilLegalCompleto === false && usuario.rol === 'SUPER_ADMIN') {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <Toaster position="top-right" richColors closeButton />
+          <Routes>
+            <Route path="/onboarding-legal" element={<OnboardingLegalPage />} />
+            <Route path="*" element={<Navigate to="/onboarding-legal" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </QueryClientProvider>
+    )
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Toaster position="top-right" richColors closeButton />
         <PWAInstallPrompt />
+        <ReloadPrompt />
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/update-password" element={<UpdatePasswordPage />} />
+          <Route path="/recover-with-pin" element={<RecoverWithPinPage />} />
           <Route path="/" element={
             <PrivateRoute>
               <Layout />

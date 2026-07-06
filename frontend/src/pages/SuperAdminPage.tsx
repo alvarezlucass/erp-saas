@@ -27,6 +27,8 @@ import {
   ChevronDown
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { SaasPackagingTab } from '../components/SaasPackagingTab'
+import { saasApi } from '../lib/api'
 
 // ─── Configuración de Módulos ────────────────────────────────────────────────
 const MODULOS = [
@@ -159,7 +161,7 @@ function ModuloCard({ modulo, activo, onToggle }: { modulo: typeof MODULOS[0], a
 // ─── Página principal ─────────────────────────────────────────────────────────
 export function SuperAdminPage() {
   const queryClient = useQueryClient()
-  const [activeTab, setActiveTab] = useState<'empresas' | 'staging'>('empresas')
+  const [activeTab, setActiveTab] = useState<'empresas' | 'staging' | 'saas'>('empresas')
   const [showAlta, setShowAlta] = useState(false)
   const [empresaEditando, setEmpresaEditando] = useState<any>(null)
   const [filter, setFilter] = useState('')
@@ -208,6 +210,12 @@ export function SuperAdminPage() {
     queryKey: ['super', 'empresas'],
     queryFn: () => superAdminService.listarEmpresas()
   })
+
+  const { data: saasPlanes = [] } = useQuery({
+    queryKey: ['saasPlanes'],
+    queryFn: saasApi.getPlanes
+  })
+
 
   const onboardMut = useMutation({
     mutationFn: (datos: any) => superAdminService.onboardEmpresa(datos),
@@ -308,6 +316,16 @@ export function SuperAdminPage() {
                 </span>
               )}
             </button>
+
+              <button
+                onClick={() => setActiveTab('saas')}
+                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                  activeTab === 'saas' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                SaaS Packaging
+              </button>
+
           </div>
 
           {activeTab === 'empresas' && (
@@ -400,7 +418,12 @@ export function SuperAdminPage() {
       )}
 
       {/* ─ BANDEJA DE IMPORTACIONES ─ */}
-      {activeTab === 'staging' && (
+      
+        {activeTab === 'saas' && (
+          <SaasPackagingTab />
+        )}
+
+        {activeTab === 'staging' && (
         <section className="space-y-4">
           {staging.length === 0 ? (
             <div className="bg-white border border-gray-100 rounded-[2.5rem] p-16 text-center shadow-sm">

@@ -208,6 +208,7 @@ export default function UsuariosPage() {
   const [nombre, setNombre] = useState('')
   const [email, setEmail] = useState('')
   const [identificadorNacional, setIdentificadorNacional] = useState('')
+  const [pinSeguridad, setPinSeguridad] = useState('')
   const [password, setPassword] = useState('')
   const [rol, setRol] = useState('OPERADOR')
   const [tarifaVenta, setTarifaVenta] = useState('PRECIO_FINAL')
@@ -275,6 +276,7 @@ export default function UsuariosPage() {
       const activePerms = user.permisos || []
       setPermisos(activePerms)
       setPassword('')
+      setPinSeguridad('')
       
       // Auto-expand groups that have active submodules
       const autoExpanded = CONFIG_MODULOS.filter(g =>
@@ -287,6 +289,7 @@ export default function UsuariosPage() {
       setEmail('')
       setIdentificadorNacional('')
       setPassword('')
+      setPinSeguridad('')
       setRol('OPERADOR')
       setTarifaVenta('PRECIO_FINAL')
       setPermisos(['VENTAS_PRECIOS'])
@@ -447,7 +450,7 @@ export default function UsuariosPage() {
                   <h2 className="text-xl font-black text-gray-900">{userSel ? 'Editar Colaborador' : 'Agregar al Equipo'}</h2>
                   <button onClick={closeModal} className="p-2"><X size={20}/></button>
                </div>
-               <form onSubmit={(e) => { e.preventDefault(); mutation.mutate({ nombre, email, identificadorNacional, password: password || undefined, rol, tarifaVenta, permisos }) }} className="p-8 space-y-6">
+               <form onSubmit={(e) => { e.preventDefault(); mutation.mutate({ nombre, email, identificadorNacional, pinSeguridad: pinSeguridad || undefined, password: password || undefined, rol, tarifaVenta, permisos }) }} className="p-8 space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                      <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Nombre</label>
@@ -461,6 +464,12 @@ export default function UsuariosPage() {
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Email (Opcional)</label>
                         <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="correo@empresa.com" className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold shadow-inner" />
                      </div>
+                  </div>
+
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">PIN de Seguridad (4 dígitos)</label>
+                     <input type="text" maxLength={6} value={pinSeguridad} onChange={e => setPinSeguridad(e.target.value)} placeholder="Opcional: PIN numérico (Ej: 1234)" className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold shadow-inner outline-none focus:ring-4 focus:ring-indigo-50" />
+                     <p className="text-[9px] font-bold text-gray-400 px-1 uppercase tracking-widest">Se usará junto al DNI para recuperar la contraseña.</p>
                   </div>
 
                   <div className="space-y-2">
