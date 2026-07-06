@@ -11,11 +11,20 @@ export function SaasPackagingTab() {
     queryFn: saasApi.getPlanes
   })
 
+  const defaultMatrix = [
+    { id: 'ESENCIAL', nombre: 'Esencial', precioMensual: 49, usuariosBase: 8, precioUsuarioExtra: 5, tiempoRespuesta: '24hs hábiles', modulos: ['VENTAS_PRECIOS', 'VENTAS_PRESUPUESTOS', 'VENTAS_POS_VENDEDOR'] },
+    { id: 'PROFESIONAL', nombre: 'Profesional', precioMensual: 79, usuariosBase: 15, precioUsuarioExtra: 5, tiempoRespuesta: '12hs hábiles', modulos: ['VENTAS_PRECIOS', 'VENTAS_PRESUPUESTOS', 'VENTAS_POS_VENDEDOR', 'VENTAS_POS_CAJA'] },
+    { id: 'ESCALA', nombre: 'Escala', precioMensual: 99, usuariosBase: 20, precioUsuarioExtra: 2, tiempoRespuesta: 'Atención Prioritaria', modulos: ['VENTAS_PRECIOS', 'VENTAS_PRESUPUESTOS', 'VENTAS_POS_VENDEDOR', 'VENTAS_POS_CAJA', 'COMPRAS_INSUMOS', 'TALLER_MOLDERIA'] },
+    { id: 'TOTAL', nombre: 'Total', precioMensual: 199, usuariosBase: 50, precioUsuarioExtra: 0, tiempoRespuesta: 'Soporte VIP 24/7', modulos: ['VENTAS_PRECIOS', 'VENTAS_PRESUPUESTOS', 'VENTAS_POS_VENDEDOR', 'VENTAS_POS_CAJA', 'COMPRAS_INSUMOS', 'TALLER_MOLDERIA', 'RRHH_FICHADAS', 'ADMINISTRACION_MOVIMIENTOS'] }
+  ]
+
+  const activePlanes = planesData && planesData.length > 0 ? planesData : defaultMatrix
+
   const [matrix, setMatrix] = useState<any[]>([])
   const [isEditing, setIsEditing] = useState(false)
 
   const handleEdit = () => {
-    setMatrix(JSON.parse(JSON.stringify(planesData)))
+    setMatrix(JSON.parse(JSON.stringify(activePlanes)))
     setIsEditing(true)
   }
 
@@ -57,7 +66,7 @@ export function SaasPackagingTab() {
 
   if (isLoading) return <div className="text-gray-500">Cargando matriz...</div>
 
-  const planes = isEditing ? matrix : planesData
+  const planes = isEditing ? matrix : activePlanes
 
   return (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">

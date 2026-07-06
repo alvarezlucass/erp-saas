@@ -3,20 +3,36 @@ import { useNavigate, Link } from 'react-router-dom'
 import { authApi, saasApi } from '../lib/api'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '../store/authStore'
+import { CONFIG_MODULOS } from '../constants/modules'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Rocket, User, Mail, Lock, Building2, FileText, CheckCircle2, 
   ArrowRight, ArrowLeft, Sparkles, AlertTriangle, Eye, EyeOff, ShieldCheck
 } from 'lucide-react'
 
+const getModuleName = (id: string) => {
+  for (const group of CONFIG_MODULOS) {
+    const sub = group.submodules.find(s => s.id === id)
+    if (sub) return sub.label
+  }
+  return id
+}
+
 export function RegisterPage() {
 
-  const { data: planesData = [], isLoading: loadingPlanes } = useQuery({
+  const { data: fetchPlanesData = [], isLoading: loadingPlanes } = useQuery({
     queryKey: ['saasPlanes'],
     queryFn: saasApi.getPlanes
   })
   
-  const selectedPlanData = planesData.find((p: any) => p.id === selectedPlan) || planesData[1] || planesData[0] || {}
+  const defaultMatrix = [
+    { id: 'ESENCIAL', nombre: 'Esencial', precioMensual: 49, usuariosBase: 8, precioUsuarioExtra: 5, tiempoRespuesta: '24hs hábiles', modulos: ['VENTAS_PRECIOS', 'VENTAS_PRESUPUESTOS', 'VENTAS_POS_VENDEDOR'] },
+    { id: 'PROFESIONAL', nombre: 'Profesional', precioMensual: 79, usuariosBase: 15, precioUsuarioExtra: 5, tiempoRespuesta: '12hs hábiles', modulos: ['VENTAS_PRECIOS', 'VENTAS_PRESUPUESTOS', 'VENTAS_POS_VENDEDOR', 'VENTAS_POS_CAJA'] },
+    { id: 'ESCALA', nombre: 'Escala', precioMensual: 99, usuariosBase: 20, precioUsuarioExtra: 2, tiempoRespuesta: 'Atención Prioritaria', modulos: ['VENTAS_PRECIOS', 'VENTAS_PRESUPUESTOS', 'VENTAS_POS_VENDEDOR', 'VENTAS_POS_CAJA', 'COMPRAS_INSUMOS', 'TALLER_MOLDERIA'] },
+    { id: 'TOTAL', nombre: 'Total', precioMensual: 199, usuariosBase: 50, precioUsuarioExtra: 0, tiempoRespuesta: 'Soporte VIP 24/7', modulos: ['VENTAS_PRECIOS', 'VENTAS_PRESUPUESTOS', 'VENTAS_POS_VENDEDOR', 'VENTAS_POS_CAJA', 'COMPRAS_INSUMOS', 'TALLER_MOLDERIA', 'RRHH_FICHADAS', 'ADMINISTRACION_MOVIMIENTOS'] }
+  ]
+
+  const planesData = fetchPlanesData.length > 0 ? fetchPlanesData : defaultMatrix
 
   const [step, setStep] = useState(1)
   const [nombreDueño, setNombreDueño] = useState('')
@@ -28,6 +44,8 @@ export function RegisterPage() {
   const [cuit, setCuit] = useState('')
 
   const [selectedPlan, setSelectedPlan] = useState<string>('PROFESIONAL')
+  
+  const selectedPlanData = planesData.find((p: any) => p.id === selectedPlan) || planesData[1] || planesData[0] || {}
   const [terminosAceptados, setTerminosAceptados] = useState(false)
 
   const [error, setError] = useState('')
@@ -307,7 +325,7 @@ export function RegisterPage() {
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {planesData.map((item: any) => {
                       const key = item.id
                       const active = selectedPlan === key
@@ -342,11 +360,11 @@ export function RegisterPage() {
                               <span className="text-[10px] text-gray-500 font-black uppercase tracking-wider">USD/mes</span>
                             </div>
                             <p className="text-[10px] text-gray-400 font-bold mb-6">Hasta {item.usuariosBase} usuarios · {item.tiempoRespuesta}</p>
-                            <div className="space-y-3">
-                              {(item.modulos || []).slice(0,5).map((carac: string, i: number) => (
+                            <div className="space-y-3 max-h-[150px] overflow-y-auto md:max-h-none md:overflow-visible pr-2 custom-scrollbar">
+                              {(item.modulos || []).map((carac: string, i: number) => (
                                 <div key={i} className="flex items-start gap-2 text-xs font-semibold text-gray-300">
                                   <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 shrink-0" />
-                                  <span>{carac}</span>
+                                  <span>{getModuleName(carac)}</span>
                                 </div>
                               ))}
                             </div>

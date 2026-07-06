@@ -692,13 +692,107 @@ export const subCategoriasApi = {
 }
 
 export const saasApi = {
-  getPlanes: (): Promise<any[]> => api.get('/saas/planes').then(r => r.data),
-  updatePlanes: (data: any[]): Promise<any> => api.post('/saas/planes', data).then(r => r.data),
+  getPlanes: async (): Promise<any[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('configuracion')
+        .select('valor')
+        .eq('empresaId', 'SAAS_MASTER')
+        .eq('clave', 'SAAS_MATRIX')
+        .single()
+      
+      if (error) throw error
+      return data?.valor ? JSON.parse(data.valor) : []
+    } catch (e: any) {
+      console.error('ERROR CRITICO AL LEER SAAS_MATRIX:', e.message || e)
+      return []
+    }
+  },
+  updatePlanes: async (planes: any[]): Promise<any> => {
+    try {
+      const { data: existing } = await supabase
+        .from('configuracion')
+        .select('id')
+        .eq('empresaId', 'SAAS_MASTER')
+        .eq('clave', 'SAAS_MATRIX')
+        .maybeSingle()
+        
+      if (existing) {
+        const { error } = await supabase
+          .from('configuracion')
+          .update({ valor: JSON.stringify(planes) })
+          .eq('id', existing.id)
+        if (error) throw error
+      } else {
+          const { error } = await supabase
+          .from('configuracion')
+          .insert({
+            id: crypto.randomUUID(),
+            empresaId: 'SAAS_MASTER',
+            clave: 'SAAS_MATRIX',
+            valor: JSON.stringify(planes)
+          })
+        if (error) throw error
+      }
+      return { success: true }
+    } catch (e: any) {
+      console.error('Error updating planes:', e)
+      throw new Error(e.message || 'Error al actualizar planes')
+    }
+  },
 }
 
 export const configuracionApi = {
-  get: (): Promise<Record<string, string>> => api.get('/configuracion').then(r => r.data),
-  update: (data: Record<string, string>): Promise<any> => api.post('/configuracion', data).then(r => r.data),
+  get: async (): Promise<Record<string, string>> => {
+    try {
+      const { data: userData } = await supabase.from('usuarios').select('membresias(empresaId)').single()
+      const empresaId = userData?.membresias?.[0]?.empresaId
+      if (!empresaId) return {}
+      
+      const { data } = await supabase.from('configuracion').select('clave, valor').eq('empresaId', empresaId)
+      if (!data) return {}
+      
+      const config: Record<string, string> = {}
+      data.forEach(item => { config[item.clave] = item.valor })
+      return config
+    } catch (e) {
+      console.warn('Error fetching configuracion:', e)
+      return {}
+    }
+  },
+  update: async (configData: Record<string, string>): Promise<any> => {
+    try {
+      const { data: userData } = await supabase.from('usuarios').select('membresias(empresaId)').single()
+      const empresaId = userData?.membresias?.[0]?.empresaId
+      if (!empresaId) throw new Error('No empresaId found')
+
+      for (const [clave, valor] of Object.entries(configData)) {
+        const { data: existing } = await supabase
+          .from('configuracion')
+          .select('id')
+          .eq('empresaId', empresaId)
+          .eq('clave', clave)
+          .maybeSingle()
+
+        if (existing) {
+          const { error } = await supabase.from('configuracion').update({ valor }).eq('id', existing.id)
+          if (error) throw error
+        } else {
+          const { error } = await supabase.from('configuracion').insert({
+            id: crypto.randomUUID(),
+            empresaId,
+            clave,
+            valor
+          })
+          if (error) throw error
+        }
+      }
+      return { success: true }
+    } catch (e: any) {
+      console.error('Error updating configuracion:', e)
+      throw new Error(e.message || 'Error al actualizar configuracion')
+    }
+  }
 }
 
 // ─── HELPER DE TRADUCCIÓN DE ERRORES ──────────────────────────────────────────
